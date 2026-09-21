@@ -10,11 +10,29 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AgendadosRouteImport } from './routes/agendados'
+import { Route as ClientesRouteImport } from './routes/clientes'
+import { Route as ExportarRouteImport } from './routes/exportar'
 import { Route as ClienteIdRouteImport } from './routes/cliente.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgendadosRoute = AgendadosRouteImport.update({
+  id: '/agendados',
+  path: '/agendados',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClientesRoute = ClientesRouteImport.update({
+  id: '/clientes',
+  path: '/clientes',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ExportarRoute = ExportarRouteImport.update({
+  id: '/exportar',
+  path: '/exportar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClienteIdRoute = ClienteIdRouteImport.update({
@@ -25,27 +43,40 @@ const ClienteIdRoute = ClienteIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/agendados': typeof AgendadosRoute
+  '/clientes': typeof ClientesRoute
+  '/exportar': typeof ExportarRoute
   '/cliente/$id': typeof ClienteIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/agendados': typeof AgendadosRoute
+  '/clientes': typeof ClientesRoute
+  '/exportar': typeof ExportarRoute
   '/cliente/$id': typeof ClienteIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/agendados': typeof AgendadosRoute
+  '/clientes': typeof ClientesRoute
+  '/exportar': typeof ExportarRoute
   '/cliente/$id': typeof ClienteIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cliente/$id'
+  fullPaths: '/' | '/agendados' | '/clientes' | '/exportar' | '/cliente/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cliente/$id'
-  id: '__root__' | '/' | '/cliente/$id'
+  to: '/' | '/agendados' | '/clientes' | '/exportar' | '/cliente/$id'
+  id:
+    '__root__' | '/' | '/agendados' | '/clientes' | '/exportar' | '/cliente/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AgendadosRoute: typeof AgendadosRoute
+  ClientesRoute: typeof ClientesRoute
+  ExportarRoute: typeof ExportarRoute
   ClienteIdRoute: typeof ClienteIdRoute
 }
 
@@ -56,6 +87,27 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agendados': {
+      id: '/agendados'
+      path: '/agendados'
+      fullPath: '/agendados'
+      preLoaderRoute: typeof AgendadosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clientes': {
+      id: '/clientes'
+      path: '/clientes'
+      fullPath: '/clientes'
+      preLoaderRoute: typeof ClientesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/exportar': {
+      id: '/exportar'
+      path: '/exportar'
+      fullPath: '/exportar'
+      preLoaderRoute: typeof ExportarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cliente/$id': {
@@ -70,6 +122,9 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AgendadosRoute: AgendadosRoute,
+  ClientesRoute: ClientesRoute,
+  ExportarRoute: ExportarRoute,
   ClienteIdRoute: ClienteIdRoute,
 }
 export const routeTree = rootRouteImport
