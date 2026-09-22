@@ -14,8 +14,8 @@ const MATCHERS: Record<string, string[]> = {
   contract: ["contrato", "contract", "n contrato", "nº contrato", "num contrato", "numero", "n.", "id"],
   name: ["nome", "name", "cliente", "customer", "titular"],
   phone: ["telefone", "telemovel", "tel", "phone", "contacto", "contato", "movel"],
-  zip: ["cep", "codigo postal", "cod postal", "cp", "postal", "zip"],
-  address: ["morada", "endereco", "address", "rua", "direccion"],
+  zip: ["codigo postc", "codigo postal", "cod postal", "postc", "cep", "cp", "postal", "zip"],
+  address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
 };
 
