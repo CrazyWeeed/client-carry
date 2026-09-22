@@ -33,6 +33,43 @@ function findColumn(headers: string[], key: keyof typeof MATCHERS): string | nul
   return null;
 }
 
+export interface Cols {
+  contract: number;
+  name: number;
+  phone: number;
+  zip: number;
+  address: number;
+  type: number;
+}
+
+/** Locate column indices; two "Contacto" headers → 1st is contract, 2nd is phone. */
+export function locateColumns(headers: string[]): Cols {
+  const contactoIdxs = headers.map((h, i) => (norm(h) === "contacto" ? i : -1)).filter((i) => i >= 0);
+  const idx = (key: keyof typeof MATCHERS) => {
+    const raw = findColumn(headers, key);
+    return raw === null ? -1 : headers.indexOf(raw);
+  };
+  return {
+    contract: contactoIdxs[0] ?? idx("contract"),
+    name: idx("name"),
+    phone: contactoIdxs[1] ?? idx("phone"),
+    zip: idx("zip"),
+    address: idx("address"),
+    type: idx("type"),
+  };
+}
+
+/** Unique keys mirroring SheetJS duplicate-header suffixing (Contacto, Contacto_1...). */
+function uniqKeys(headers: string[]): string[] {
+  const seen = new Map<string, number>();
+  return headers.map((h) => {
+    const base = h || "col";
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    return n === 1 ? base : `${base}_${n - 1}`;
+  });
+}
+
 function hashId(s: string): string {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
