@@ -130,7 +130,7 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
         history: [],
         lastModified: now,
         sheetName,
-        originalData: row,
+        originalData,
       });
     }
   }
