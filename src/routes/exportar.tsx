@@ -33,7 +33,10 @@ function ExportPage() {
   const done = clients.filter((c) => c.status !== "pending").length;
 
   const run = async () => {
-    if (clients.length === 0) return toast.error("Importa um Excel primeiro.");
+    if (clients.length === 0) {
+      toast.error("Importa um Excel primeiro.");
+      return;
+    }
     setBusy(true);
     try {
       const name = await exportWorkbook(clients, importedFileName);

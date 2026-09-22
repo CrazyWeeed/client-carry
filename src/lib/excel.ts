@@ -21,11 +21,12 @@ const MATCHERS: Record<string, string[]> = {
 
 function findColumn(headers: string[], key: keyof typeof MATCHERS): string | null {
   const nh = headers.map((h) => ({ raw: h, n: norm(h) }));
-  for (const m of MATCHERS[key]) {
+  const list = MATCHERS[key] ?? [];
+  for (const m of list) {
     const exact = nh.find((h) => h.n === m);
     if (exact) return exact.raw;
   }
-  for (const m of MATCHERS[key]) {
+  for (const m of list) {
     const partial = nh.find((h) => h.n.includes(m));
     if (partial) return partial.raw;
   }
