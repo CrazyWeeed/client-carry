@@ -14,8 +14,8 @@ const MATCHERS: Record<string, string[]> = {
   contract: ["contrato", "contract", "n contrato", "nº contrato", "num contrato", "numero", "n.", "id"],
   name: ["nome", "name", "cliente", "customer", "titular"],
   phone: ["telefone", "telemovel", "tel", "phone", "contacto", "contato", "movel"],
-  zip: ["cep", "codigo postal", "cod postal", "cp", "postal", "zip"],
-  address: ["morada", "endereco", "address", "rua", "direccion"],
+  zip: ["codigo postc", "codigo postal", "cod postal", "postc", "cep", "cp", "postal", "zip"],
+  address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
 };
 
@@ -31,6 +31,43 @@ function findColumn(headers: string[], key: keyof typeof MATCHERS): string | nul
     if (partial) return partial.raw;
   }
   return null;
+}
+
+export interface Cols {
+  contract: number;
+  name: number;
+  phone: number;
+  zip: number;
+  address: number;
+  type: number;
+}
+
+/** Locate column indices; two "Contacto" headers → 1st is contract, 2nd is phone. */
+export function locateColumns(headers: string[]): Cols {
+  const contactoIdxs = headers.map((h, i) => (norm(h) === "contacto" ? i : -1)).filter((i) => i >= 0);
+  const idx = (key: keyof typeof MATCHERS) => {
+    const raw = findColumn(headers, key);
+    return raw === null ? -1 : headers.indexOf(raw);
+  };
+  return {
+    contract: contactoIdxs[0] ?? idx("contract"),
+    name: idx("name"),
+    phone: contactoIdxs[1] ?? idx("phone"),
+    zip: idx("zip"),
+    address: idx("address"),
+    type: idx("type"),
+  };
+}
+
+/** Unique keys mirroring SheetJS duplicate-header suffixing (Contacto, Contacto_1...). */
+function uniqKeys(headers: string[]): string[] {
+  const seen = new Map<string, number>();
+  return headers.map((h) => {
+    const base = h || "col";
+    const n = (seen.get(base) ?? 0) + 1;
+    seen.set(base, n);
+    return n === 1 ? base : `${base}_${n - 1}`;
+  });
 }
 
 function hashId(s: string): string {
@@ -61,38 +98,39 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-    if (rows.length === 0) continue;
-    const headers = Object.keys(rows[0]!);
-    const cContract = findColumn(headers, "contract");
-    const cName = findColumn(headers, "name");
-    const cPhone = findColumn(headers, "phone");
-    const cZip = findColumn(headers, "zip");
-    const cAddress = findColumn(headers, "address");
-    const cType = findColumn(headers, "type");
+    const grid = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+    if (grid.length < 2) continue;
+    const rawHeaders = (grid[0] ?? []).map((h) => String(h ?? ""));
+    const keys = uniqKeys(rawHeaders);
+    const cols = locateColumns(rawHeaders);
+    const get = (row: unknown[], i: number) => (i >= 0 ? String(row[i] ?? "").trim() : "");
 
-    for (const row of rows) {
-      const contract = String(cContract ? row[cContract] : "").trim();
-      const name = String(cName ? row[cName] : "").trim();
+    for (const row of grid.slice(1)) {
+      const contract = get(row, cols.contract);
+      const name = get(row, cols.name);
       if (!contract && !name) {
         skipped++;
         continue;
       }
       const contractNumber = contract || `${sheetName}-${name}`;
+      const originalData: Record<string, unknown> = {};
+      keys.forEach((k, i) => {
+        originalData[k] = row[i] ?? "";
+      });
       clients.push({
         id: hashId(contractNumber),
         contractNumber,
         name: name || "(sem nome)",
-        phone: String(cPhone ? row[cPhone] : "").trim(),
-        zipCode: String(cZip ? row[cZip] : "").trim(),
-        address: String(cAddress ? row[cAddress] : "").trim(),
-        type: parseType(cType ? row[cType] : ""),
+        phone: get(row, cols.phone),
+        zipCode: get(row, cols.zip),
+        address: get(row, cols.address),
+        type: parseType(cols.type >= 0 ? row[cols.type] : ""),
         status: "pending",
         scheduledFor: null,
         history: [],
         lastModified: now,
         sheetName,
-        originalData: row,
+        originalData,
       });
     }
   }
@@ -167,11 +205,10 @@ export async function exportWorkbook(clients: Client[], fileName: string | null)
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
       if (rows.length === 0) continue;
       const headers = Object.keys(rows[0]!);
-      const cContract = findColumn(headers, "contract");
-      const cName = findColumn(headers, "name");
+      const cols = locateColumns(headers);
       const merged = rows.map((row) => {
-        const contract = String(cContract ? row[cContract] : "").trim();
-        const name = String(cName ? row[cName] : "").trim();
+        const contract = cols.contract >= 0 ? String(row[headers[cols.contract]!] ?? "").trim() : "";
+        const name = cols.name >= 0 ? String(row[headers[cols.name]!] ?? "").trim() : "";
         const contractNumber = contract || `${sheetName}-${name}`;
         const c = byId.get(hashId(contractNumber));
         return { ...row, ...(c ? extraColumns(c) : {}) };
