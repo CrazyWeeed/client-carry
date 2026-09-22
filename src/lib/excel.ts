@@ -205,11 +205,10 @@ export async function exportWorkbook(clients: Client[], fileName: string | null)
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
       if (rows.length === 0) continue;
       const headers = Object.keys(rows[0]!);
-      const cContract = findColumn(headers, "contract");
-      const cName = findColumn(headers, "name");
+      const cols = locateColumns(headers);
       const merged = rows.map((row) => {
-        const contract = String(cContract ? row[cContract] : "").trim();
-        const name = String(cName ? row[cName] : "").trim();
+        const contract = cols.contract >= 0 ? String(row[headers[cols.contract]!] ?? "").trim() : "";
+        const name = cols.name >= 0 ? String(row[headers[cols.name]!] ?? "").trim() : "";
         const contractNumber = contract || `${sheetName}-${name}`;
         const c = byId.get(hashId(contractNumber));
         return { ...row, ...(c ? extraColumns(c) : {}) };
