@@ -98,32 +98,33 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
   for (const sheetName of wb.SheetNames) {
     const ws = wb.Sheets[sheetName];
     if (!ws) continue;
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-    if (rows.length === 0) continue;
-    const headers = Object.keys(rows[0]!);
-    const cContract = findColumn(headers, "contract");
-    const cName = findColumn(headers, "name");
-    const cPhone = findColumn(headers, "phone");
-    const cZip = findColumn(headers, "zip");
-    const cAddress = findColumn(headers, "address");
-    const cType = findColumn(headers, "type");
+    const grid = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+    if (grid.length < 2) continue;
+    const rawHeaders = (grid[0] ?? []).map((h) => String(h ?? ""));
+    const keys = uniqKeys(rawHeaders);
+    const cols = locateColumns(rawHeaders);
+    const get = (row: unknown[], i: number) => (i >= 0 ? String(row[i] ?? "").trim() : "");
 
-    for (const row of rows) {
-      const contract = String(cContract ? row[cContract] : "").trim();
-      const name = String(cName ? row[cName] : "").trim();
+    for (const row of grid.slice(1)) {
+      const contract = get(row, cols.contract);
+      const name = get(row, cols.name);
       if (!contract && !name) {
         skipped++;
         continue;
       }
       const contractNumber = contract || `${sheetName}-${name}`;
+      const originalData: Record<string, unknown> = {};
+      keys.forEach((k, i) => {
+        originalData[k] = row[i] ?? "";
+      });
       clients.push({
         id: hashId(contractNumber),
         contractNumber,
         name: name || "(sem nome)",
-        phone: String(cPhone ? row[cPhone] : "").trim(),
-        zipCode: String(cZip ? row[cZip] : "").trim(),
-        address: String(cAddress ? row[cAddress] : "").trim(),
-        type: parseType(cType ? row[cType] : ""),
+        phone: get(row, cols.phone),
+        zipCode: get(row, cols.zip),
+        address: get(row, cols.address),
+        type: parseType(cols.type >= 0 ? row[cols.type] : ""),
         status: "pending",
         scheduledFor: null,
         history: [],
