@@ -50,7 +50,12 @@ function ClientPage() {
     );
   }
 
-  const phoneDigits = client.phone.replace(/[^\d+]/g, "");
+  const digits = client.phone.replace(/\D/g, "");
+  const phoneDigits = digits
+    ? digits.length === 9
+      ? `+351${digits}`
+      : `+${digits}`
+    : "";
   const mapsQuery = encodeURIComponent([client.address, client.zipCode].filter(Boolean).join(", "));
 
   const confirm = (status: ActionStatus, note: string, scheduledFor: string | null) => {
@@ -95,7 +100,7 @@ function ClientPage() {
             <p className="mt-0.5 text-[13px] font-medium">{client.phone || "—"}</p>
           </div>
           <div className="glass-soft rounded-xl px-3 py-2.5">
-            <p className="text-[10px] tracking-wide text-steel uppercase">CEP</p>
+            <p className="text-[10px] tracking-wide text-steel uppercase">Código Postal</p>
             <p className="mt-0.5 text-[13px] font-medium">{client.zipCode || "—"}</p>
           </div>
         </div>
