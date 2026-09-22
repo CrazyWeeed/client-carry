@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
 import { nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
+import { Phone, MapPin, Search, Check, X, CalendarClock, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
   head: () => ({
@@ -106,7 +107,7 @@ function ClientPage() {
             aria-disabled={!phoneDigits}
             className="diag grid min-h-12 place-items-center rounded-xl bg-accent font-display text-[14px] font-bold text-ink tap aria-disabled:opacity-40"
           >
-            Ligar 📞
+            <span className="flex items-center gap-2"><Phone className="size-4" /> Ligar</span>
           </a>
           <a
             href={`https://maps.google.com/?q=${mapsQuery}`}
@@ -114,7 +115,7 @@ function ClientPage() {
             rel="noreferrer"
             className="diag-r glass-soft grid min-h-12 place-items-center rounded-xl font-display text-[14px] font-bold text-mist tap"
           >
-            Ver no Maps 🗺️
+            <span className="flex items-center gap-2"><MapPin className="size-4" /> Ver no Maps</span>
           </a>
         </div>
       </div>
@@ -141,10 +142,10 @@ function ClientPage() {
 
       <div className="fixed inset-x-0 bottom-[84px] z-20 mx-auto w-full max-w-md px-4">
         <div className="glass grid grid-cols-4 gap-1.5 rounded-2xl p-1.5">
-          <ActionBtn onClick={() => setAction("analysis")} className="glass-soft text-mist" icon="🔍" label="Análise" />
-          <ActionBtn onClick={() => setAction("withdrawn")} className="border border-mint/30 bg-mint/20 text-mint" icon="✅" label="Retirado" />
-          <ActionBtn onClick={() => setAction("refused")} className="border border-rose/30 bg-rose/20 text-rose" icon="❌" label="Recusado" />
-          <ActionBtn onClick={() => setAction("scheduled")} className="border border-amber/30 bg-amber/20 text-amber" icon="📅" label="Agendar" />
+          <ActionBtn onClick={() => setAction("analysis")} className="glass-soft text-mist" icon={Search} label="Análise" />
+          <ActionBtn onClick={() => setAction("withdrawn")} className="border border-mint/30 bg-mint/20 text-mint" icon={Check} label="Retirado" />
+          <ActionBtn onClick={() => setAction("refused")} className="border border-rose/30 bg-rose/20 text-rose" icon={X} label="Recusado" />
+          <ActionBtn onClick={() => setAction("scheduled")} className="border border-amber/30 bg-amber/20 text-amber" icon={CalendarClock} label="Agendar" />
         </div>
       </div>
       <div className="h-20" />
@@ -154,10 +155,10 @@ function ClientPage() {
   );
 }
 
-function ActionBtn({ onClick, className, icon, label }: { onClick: () => void; className: string; icon: string; label: string }) {
+function ActionBtn({ onClick, className, icon: Icon, label }: { onClick: () => void; className: string; icon: LucideIcon; label: string }) {
   return (
     <button onClick={onClick} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold tap ${className}`}>
-      <span className="text-base leading-none">{icon}</span>
+      <Icon className="size-5" />
       {label}
     </button>
   );
