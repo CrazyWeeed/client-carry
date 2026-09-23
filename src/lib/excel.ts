@@ -42,15 +42,16 @@ export interface Cols {
   type: number;
 }
 
-/** Locate column indices; two "Contacto" headers → 1st is contract, 2nd is phone. */
+/** Locate column indices; column 1 ("Contacto") is the contract, 2nd "Contacto" is the phone. */
 export function locateColumns(headers: string[]): Cols {
   const contactoIdxs = headers.map((h, i) => (norm(h) === "contacto" ? i : -1)).filter((i) => i >= 0);
   const idx = (key: keyof typeof MATCHERS) => {
     const raw = findColumn(headers, key);
     return raw === null ? -1 : headers.indexOf(raw);
   };
+  const contractIdx = contactoIdxs[0] ?? idx("contract");
   return {
-    contract: contactoIdxs[0] ?? idx("contract"),
+    contract: contractIdx >= 0 ? contractIdx : 0,
     name: idx("name"),
     phone: contactoIdxs[1] ?? idx("phone"),
     zip: idx("zip"),
