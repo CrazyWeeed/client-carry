@@ -4,6 +4,12 @@ import type { Client, ClientStatus, HistoryEntry } from "./types";
 
 export const ORIGINAL_FILE_KEY = "prosegur-field:original-xlsx";
 
+const normPhone = (s: unknown) => {
+  const d = String(s ?? "").replace(/\D/g, "");
+  return d.length === 11 && d.startsWith("351") ? d.slice(3) : d;
+};
+const isPhoneLike = (s: string) => /^[92]\d{8}$/.test(normPhone(s));
+
 interface FieldState {
   clients: Client[];
   importedAt: string | null;
