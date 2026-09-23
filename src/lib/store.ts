@@ -4,6 +4,12 @@ import type { Client, ClientStatus, HistoryEntry } from "./types";
 
 export const ORIGINAL_FILE_KEY = "prosegur-field:original-xlsx";
 
+const normPhone = (s: unknown) => {
+  const d = String(s ?? "").replace(/\D/g, "");
+  return d.length === 11 && d.startsWith("351") ? d.slice(3) : d;
+};
+const isPhoneLike = (s: string) => /^[92]\d{8}$/.test(normPhone(s));
+
 interface FieldState {
   clients: Client[];
   importedAt: string | null;
@@ -31,10 +37,25 @@ export const useFieldStore = create<FieldState>()(
         let added = 0;
         let updated = 0;
         for (const inc of incoming) {
-          const existing = map.get(inc.id);
+          let existing = map.get(inc.id);
+          if (!existing) {
+            // Heal legacy rows imported with the phone number stored as contract:
+            // they never match by id, so re-match them by phone and repair in place.
+            const incPhone = normPhone(inc.phone);
+            if (incPhone) {
+              for (const c of map.values()) {
+                if (isPhoneLike(c.contractNumber) && normPhone(c.contractNumber) === incPhone) {
+                  existing = c;
+                  break;
+                }
+              }
+            }
+          }
           if (existing) {
+            if (existing.id !== inc.id) map.delete(existing.id);
             map.set(inc.id, {
               ...existing,
+              id: inc.id,
               contractNumber: inc.contractNumber,
               name: inc.name || existing.name,
               phone: inc.phone || existing.phone,
