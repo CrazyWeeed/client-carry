@@ -42,7 +42,7 @@ export interface Cols {
   type: number;
 }
 
-/** Locate column indices; two "Contacto" headers → 1st is contract, 2nd is phone. */
+/** Locate column indices; column 1 ("Contacto") is the contract, 2nd "Contacto" is the phone. */
 export function locateColumns(headers: string[]): Cols {
   const contactoIdxs = headers.map((h, i) => (norm(h) === "contacto" ? i : -1)).filter((i) => i >= 0);
   const idx = (key: keyof typeof MATCHERS) => {
@@ -50,7 +50,7 @@ export function locateColumns(headers: string[]): Cols {
     return raw === null ? -1 : headers.indexOf(raw);
   };
   return {
-    contract: contactoIdxs[0] ?? idx("contract"),
+    contract: contactoIdxs[0] ?? idx("contract") >= 0 ? idx("contract") : 0,
     name: idx("name"),
     phone: contactoIdxs[1] ?? idx("phone"),
     zip: idx("zip"),
