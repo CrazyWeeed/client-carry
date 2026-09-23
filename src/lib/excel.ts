@@ -49,8 +49,9 @@ export function locateColumns(headers: string[]): Cols {
     const raw = findColumn(headers, key);
     return raw === null ? -1 : headers.indexOf(raw);
   };
+  const contractIdx = contactoIdxs[0] ?? idx("contract");
   return {
-    contract: contactoIdxs[0] ?? idx("contract") >= 0 ? idx("contract") : 0,
+    contract: contractIdx >= 0 ? contractIdx : 0,
     name: idx("name"),
     phone: contactoIdxs[1] ?? idx("phone"),
     zip: idx("zip"),
