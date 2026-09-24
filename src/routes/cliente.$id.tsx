@@ -70,7 +70,7 @@ function ClientPage() {
   };
 
   return (
-    <AppShell title="Detalhes do Cliente">
+    <AppShell title="Detalhes do Cliente" hideNav>
       <div className="mb-3 flex items-center justify-between">
         <button onClick={() => history.back()} className="glass-soft grid size-10 place-items-center rounded-xl text-lg tap" aria-label="Voltar">
           ←
@@ -145,15 +145,14 @@ function ClientPage() {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-[84px] z-20 mx-auto w-full max-w-md px-4">
-        <div className="glass grid grid-cols-4 gap-1.5 rounded-2xl p-1.5">
+      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t border-border bg-ink/95 px-4 py-4 backdrop-blur-md">
+        <div className="grid grid-cols-4 gap-1.5">
           <ActionBtn onClick={() => setAction("analysis")} className="glass-soft text-mist" icon={Search} label="Análise" />
           <ActionBtn onClick={() => setAction("withdrawn")} className="border border-mint/30 bg-mint/20 text-mint" icon={Check} label="Retirado" />
           <ActionBtn onClick={() => setAction("refused")} className="border border-rose/30 bg-rose/20 text-rose" icon={X} label="Recusado" />
           <ActionBtn onClick={() => setAction("scheduled")} className="border border-amber/30 bg-amber/20 text-amber" icon={CalendarClock} label="Agendar" />
         </div>
       </div>
-      <div className="h-20" />
 
       <StatusSheet key={action ?? "none"} status={action} onClose={() => setAction(null)} onConfirm={confirm} />
     </AppShell>
