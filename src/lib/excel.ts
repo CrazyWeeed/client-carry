@@ -94,6 +94,8 @@ export function locateColumns(headers: string[]): Cols {
     zip: idxOf(findColumn(headers, "zip")),
     address: idxOf(findColumn(headers, "address")),
     type: idxOf(findColumn(headers, "type")),
+    statusProsegur: idxOf(findColumn(headers, "statusProsegur")),
+    agendadoPara: idxOf(findColumn(headers, "agendadoPara")),
   };
 }
 
@@ -118,6 +120,38 @@ function parseType(v: unknown): ClientType {
   const n = norm(v);
   if (n.startsWith("com") || n.includes("empresa") || n.includes("negocio")) return "commercial";
   return "residential";
+}
+
+/** Status written by our own export (Status_Prosegur) — tolerates keys and PT labels. */
+function parseExcelStatus(v: unknown): ClientStatus {
+  const n = norm(v);
+  if (n.includes("retirad") || n === "withdrawn") return "withdrawn";
+  if (n.includes("recusad") || n === "refused") return "refused";
+  if (n.includes("analise") || n.includes("analysis")) return "analysis";
+  if (n.includes("agendad") || n.includes("scheduled")) return "scheduled";
+  return "pending";
+}
+
+/** Agendado_Para written by our export ("dd/MM/yyyy HH:mm"), ISO, or bare "HH:mm" → tomorrow. */
+function parseScheduledFor(v: unknown): string | null {
+  const t = String(v ?? "").trim();
+  if (!t) return null;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
+    const d = new Date(t);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const dt = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (dt) {
+    const d = new Date(Number(dt[3]), Number(dt[2]) - 1, Number(dt[1]), Number(dt[4]), Number(dt[5]));
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const hm = t.match(/(\d{1,2}):(\d{2})/);
+  if (hm) {
+    const tomorrow = addDays(new Date(), 1);
+    const d = setMinutes(setHours(new Date(`${format(tomorrow, "yyyy-MM-dd")}T00:00:00`), Number(hm[1])), Number(hm[2]));
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
 }
 
 export interface ParseResult {
