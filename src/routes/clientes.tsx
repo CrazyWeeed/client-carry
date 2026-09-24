@@ -43,13 +43,13 @@ function ClientsPage() {
         <input value={q} onChange={(e) => setQ(e.target.value)} className="w-full bg-transparent text-[15px] outline-none placeholder:text-steel/70" placeholder="Buscar nome, contrato, telefone, CEP" />
       </div>
 
-      <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+      <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 pr-4 [scrollbar-width:none]">
         <Chip active={status === "all"} onClick={() => setStatus("all")}>Todos</Chip>
         {STATUSES.map((s) => (
           <Chip key={s} active={status === s} onClick={() => setStatus(s)}>{STATUS_LABEL[s]}</Chip>
         ))}
       </div>
-      <div className="mt-1.5 flex gap-1.5">
+      <div className="mt-1.5 flex gap-1.5 overflow-x-auto pb-1 pr-4 [scrollbar-width:none]">
         <Chip active={type === "all"} onClick={() => setType("all")}>Ambos</Chip>
         {TYPES.map((t) => (
           <Chip key={t} active={type === t} onClick={() => setType(t)}>{TYPE_LABEL[t]}</Chip>

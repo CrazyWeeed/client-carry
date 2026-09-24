@@ -19,6 +19,8 @@ const MATCHERS: Record<string, string[]> = {
   type: ["tipo", "type", "segmento", "categoria"],
 };
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 function findColumn(headers: string[], key: keyof typeof MATCHERS): string | null {
   const nh = headers.map((h) => ({ raw: h, n: norm(h) }));
   const list = MATCHERS[key] ?? [];
@@ -26,8 +28,12 @@ function findColumn(headers: string[], key: keyof typeof MATCHERS): string | nul
     const exact = nh.find((h) => h.n === m);
     if (exact) return exact.raw;
   }
+  // Short tokens ("id", "cp", "n.") are only ever taken literally — never as a
+  // substring, otherwise "Validade" or "Identificação" would win the match.
   for (const m of list) {
-    const partial = nh.find((h) => h.n.includes(m));
+    if (m.length < 4) continue;
+    const re = new RegExp(`(^|[^a-z0-9])${escapeRe(m)}`);
+    const partial = nh.find((h) => re.test(h.n));
     if (partial) return partial.raw;
   }
   return null;
@@ -42,21 +48,48 @@ export interface Cols {
   type: number;
 }
 
-/** Locate column indices; column 1 ("Contacto") is the contract, 2nd "Contacto" is the phone. */
+/**
+ * Column positions, resolved from the headers:
+ * - two "Contacto" headers → 1st is the contract, 2nd is the phone
+ * - one  "Contacto" header  → it is the phone; the contract comes from another header
+ * - none                    → both are looked up by name
+ * The contract never ends up being the phone column.
+ */
 export function locateColumns(headers: string[]): Cols {
+  const idxOf = (raw: string | null) => (raw === null ? -1 : headers.indexOf(raw));
   const contactoIdxs = headers.map((h, i) => (norm(h) === "contacto" ? i : -1)).filter((i) => i >= 0);
-  const idx = (key: keyof typeof MATCHERS) => {
-    const raw = findColumn(headers, key);
-    return raw === null ? -1 : headers.indexOf(raw);
-  };
-  const contractIdx = contactoIdxs[0] ?? idx("contract");
+
+  let contract = -1;
+  let phone = -1;
+
+  if (contactoIdxs.length >= 2) {
+    contract = contactoIdxs[0]!;
+    phone = contactoIdxs[1]!;
+  } else if (contactoIdxs.length === 1) {
+    phone = contactoIdxs[0]!;
+    contract = idxOf(findColumn(headers, "contract"));
+  } else {
+    contract = idxOf(findColumn(headers, "contract"));
+    phone = idxOf(findColumn(headers, "phone"));
+  }
+
+  if (contract < 0 || contract === phone) {
+    const taken = new Set(
+      [phone, idxOf(findColumn(headers, "name")), idxOf(findColumn(headers, "zip")), idxOf(findColumn(headers, "address")), idxOf(findColumn(headers, "type"))].filter(
+        (i) => i >= 0,
+      ),
+    );
+    contract = headers.findIndex((h, i) => !taken.has(i) && norm(h) !== "");
+    if (contract < 0) contract = phone === 0 ? 1 : 0;
+  }
+
   return {
-    contract: contractIdx >= 0 ? contractIdx : 0,
-    name: idx("name"),
-    phone: contactoIdxs[1] ?? idx("phone"),
-    zip: idx("zip"),
-    address: idx("address"),
-    type: idx("type"),
+    contract,
+    name: idxOf(findColumn(headers, "name")),
+    phone,
+    zip: idxOf(findColumn(headers, "zip")),
+    address: idxOf(findColumn(headers, "address")),
+    type: idxOf(findColumn(headers, "type")),
   };
 }
 
@@ -107,8 +140,13 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
     const get = (row: unknown[], i: number) => (i >= 0 ? String(row[i] ?? "").trim() : "");
 
     for (const row of grid.slice(1)) {
-      const contract = get(row, cols.contract);
       const name = get(row, cols.name);
+      const phone = get(row, cols.phone);
+      let contract = get(row, cols.contract);
+      // A contract that is just the phone number repeated is never a contract.
+      const cDigits = contract.replace(/\D/g, "");
+      const pDigits = phone.replace(/\D/g, "");
+      if (cDigits && pDigits && cDigits === pDigits) contract = "";
       if (!contract && !name) {
         skipped++;
         continue;
@@ -122,7 +160,7 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
         id: hashId(contractNumber),
         contractNumber,
         name: name || "(sem nome)",
-        phone: get(row, cols.phone),
+        phone,
         zipCode: get(row, cols.zip),
         address: get(row, cols.address),
         type: parseType(cols.type >= 0 ? row[cols.type] : ""),
