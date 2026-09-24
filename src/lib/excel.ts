@@ -1,7 +1,7 @@
-import type { Client, ClientType } from "./types";
+import type { Client, ClientStatus, ClientType } from "./types";
 import { STATUS_LABEL } from "./types";
 import { ORIGINAL_FILE_KEY } from "./store";
-import { format } from "date-fns";
+import { format, addDays, setHours, setMinutes } from "date-fns";
 
 const norm = (s: unknown) =>
   String(s ?? "")
@@ -17,6 +17,8 @@ const MATCHERS: Record<string, string[]> = {
   zip: ["codigo postc", "codigo postal", "cod postal", "postc", "cep", "cp", "postal", "zip"],
   address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
+  statusProsegur: ["status_prosegur", "status prosegur", "status"],
+  agendadoPara: ["agendado_para", "agendado para", "agendamento", "scheduled"],
 };
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -46,6 +48,8 @@ export interface Cols {
   zip: number;
   address: number;
   type: number;
+  statusProsegur: number;
+  agendadoPara: number;
 }
 
 /**
@@ -90,6 +94,8 @@ export function locateColumns(headers: string[]): Cols {
     zip: idxOf(findColumn(headers, "zip")),
     address: idxOf(findColumn(headers, "address")),
     type: idxOf(findColumn(headers, "type")),
+    statusProsegur: idxOf(findColumn(headers, "statusProsegur")),
+    agendadoPara: idxOf(findColumn(headers, "agendadoPara")),
   };
 }
 
@@ -114,6 +120,38 @@ function parseType(v: unknown): ClientType {
   const n = norm(v);
   if (n.startsWith("com") || n.includes("empresa") || n.includes("negocio")) return "commercial";
   return "residential";
+}
+
+/** Status written by our own export (Status_Prosegur) — tolerates keys and PT labels. */
+function parseExcelStatus(v: unknown): ClientStatus {
+  const n = norm(v);
+  if (n.includes("retirad") || n === "withdrawn") return "withdrawn";
+  if (n.includes("recusad") || n === "refused") return "refused";
+  if (n.includes("analise") || n.includes("analysis")) return "analysis";
+  if (n.includes("agendad") || n.includes("scheduled")) return "scheduled";
+  return "pending";
+}
+
+/** Agendado_Para written by our export ("dd/MM/yyyy HH:mm"), ISO, or bare "HH:mm" → tomorrow. */
+function parseScheduledFor(v: unknown): string | null {
+  const t = String(v ?? "").trim();
+  if (!t) return null;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
+    const d = new Date(t);
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const dt = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if (dt) {
+    const d = new Date(Number(dt[3]), Number(dt[2]) - 1, Number(dt[1]), Number(dt[4]), Number(dt[5]));
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  const hm = t.match(/(\d{1,2}):(\d{2})/);
+  if (hm) {
+    const tomorrow = addDays(new Date(), 1);
+    const d = setMinutes(setHours(new Date(`${format(tomorrow, "yyyy-MM-dd")}T00:00:00`), Number(hm[1])), Number(hm[2]));
+    return Number.isNaN(d.getTime()) ? null : d.toISOString();
+  }
+  return null;
 }
 
 export interface ParseResult {
@@ -156,6 +194,11 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       keys.forEach((k, i) => {
         originalData[k] = row[i] ?? "";
       });
+      // Read back the status our own export wrote (Status_Prosegur / Agendado_Para),
+      // so a re-import restores Retirado / Recusado / Análise / Agendado + hora.
+      const status = parseExcelStatus(cols.statusProsegur >= 0 ? row[cols.statusProsegur] : "");
+      const scheduledFor = status === "scheduled" ? parseScheduledFor(cols.agendadoPara >= 0 ? row[cols.agendadoPara] : "") : null;
+
       clients.push({
         id: hashId(contractNumber),
         contractNumber,
@@ -164,8 +207,8 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
         zipCode: get(row, cols.zip),
         address: get(row, cols.address),
         type: parseType(cols.type >= 0 ? row[cols.type] : ""),
-        status: "pending",
-        scheduledFor: null,
+        status,
+        scheduledFor,
         history: [],
         lastModified: now,
         sheetName,

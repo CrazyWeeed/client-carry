@@ -69,9 +69,10 @@ export const useFieldStore = create<FieldState>()(
           } else {
             map.set(inc.id, {
               ...inc,
-              status: "pending",
-              scheduledFor: null,
-              history: [{ timestamp: now, status: "pending", note: "Importado do Excel" }],
+              // Keep the status carried by the sheet (our own export writes it back).
+              status: inc.status,
+              scheduledFor: inc.scheduledFor,
+              history: [{ timestamp: now, status: inc.status, note: "Importado do Excel", scheduledFor: inc.scheduledFor }],
               lastModified: now,
             });
             added++;
