@@ -194,6 +194,11 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       keys.forEach((k, i) => {
         originalData[k] = row[i] ?? "";
       });
+      // Read back the status our own export wrote (Status_Prosegur / Agendado_Para),
+      // so a re-import restores Retirado / Recusado / Análise / Agendado + hora.
+      const status = parseExcelStatus(cols.statusProsegur >= 0 ? row[cols.statusProsegur] : "");
+      const scheduledFor = status === "scheduled" ? parseScheduledFor(cols.agendadoPara >= 0 ? row[cols.agendadoPara] : "") : null;
+
       clients.push({
         id: hashId(contractNumber),
         contractNumber,
@@ -202,8 +207,8 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
         zipCode: get(row, cols.zip),
         address: get(row, cols.address),
         type: parseType(cols.type >= 0 ? row[cols.type] : ""),
-        status: "pending",
-        scheduledFor: null,
+        status,
+        scheduledFor,
         history: [],
         lastModified: now,
         sheetName,
