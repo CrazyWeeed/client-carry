@@ -5,7 +5,7 @@ import { useFieldStore } from "@/lib/store";
 import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
 
-export function AppShell({ children, title }: { children: ReactNode; title?: string }) {
+export function AppShell({ children, title, hideNav }: { children: ReactNode; title?: string; hideNav?: boolean }) {
   const { hydrated, setHydrated, releaseDueSchedules } = useFieldStore();
   const clients = useFieldStore((s) => s.clients);
   const importedFileName = useFieldStore((s) => s.importedFileName);
@@ -114,7 +114,7 @@ export function AppShell({ children, title }: { children: ReactNode; title?: str
 
       <main className="relative px-4 pt-4 pb-28">{children}</main>
 
-      <BottomNav />
+      {!hideNav && <BottomNav />}
 
       <input
         ref={fileRef}

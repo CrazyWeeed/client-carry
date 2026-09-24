@@ -23,6 +23,15 @@ export const Route = createFileRoute("/exportar")({
 
 const ORDER: ClientStatus[] = ["withdrawn", "refused", "analysis", "scheduled", "pending"];
 
+const OUTPUT_COLUMNS = [
+  { label: "Status", col: "Status_Prosegur", hint: "estado em código: pending, scheduled…" },
+  { label: "Etiqueta", col: "Status_Label", hint: "o mesmo estado em português" },
+  { label: "Data", col: "Status_Data", hint: "quando o estado mudou" },
+  { label: "Notas", col: "Observacao_Ultima", hint: "a última observação registada" },
+  { label: "Retorno", col: "Agendado_Para", hint: "data e hora do agendamento" },
+  { label: "Resumo", col: "Historico_Resumido", hint: "as últimas 3 mudanças" },
+];
+
 function ExportPage() {
   const clients = useFieldStore((s) => s.clients);
   const importedAt = useFieldStore((s) => s.importedAt);
@@ -69,15 +78,17 @@ function ExportPage() {
       </div>
 
       <div className="glass-soft mt-4 rounded-2xl p-4 text-[12px] text-steel">
-        <p className="font-display text-[14px] font-semibold text-mist">O que sai no ficheiro</p>
-        <p className="mt-1">Todas as colunas originais ficam intactas. No fim de cada folha são adicionadas:</p>
-        <ul className="mt-2 space-y-1 font-mono text-[11px] text-mist/80">
-          <li>Status_Prosegur · Status_Label</li>
-          <li>Status_Data</li>
-          <li>Observacao_Ultima</li>
-          <li>Agendado_Para</li>
-          <li>Historico_Resumido</li>
-        </ul>
+        <p className="font-display text-[14px] font-semibold text-mist">Ficheiro de saída</p>
+        <p className="mt-1">As colunas originais ficam intactas. No fim de cada folha são acrescentadas:</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {OUTPUT_COLUMNS.map((c) => (
+            <div key={c.col} className="glass rounded-xl px-3 py-2.5">
+              <p className="text-[9px] tracking-[0.18em] text-steel uppercase">{c.label}</p>
+              <p className="mt-0.5 font-display text-[12px] font-bold text-accent">{c.col}</p>
+              <p className="mt-0.5 text-[10px] leading-snug text-steel/90">{c.hint}</p>
+            </div>
+          ))}
+        </div>
         {importedFileName && (
           <p className="mt-3">
             Base: <span className="text-mist">{importedFileName}</span>
