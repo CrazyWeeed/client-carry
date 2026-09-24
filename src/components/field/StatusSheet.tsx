@@ -37,7 +37,7 @@ export function StatusSheet({
   const tomorrow = addDays(new Date(), 1);
   const [note, setNote] = useState("");
   const [date, setDate] = useState(format(tomorrow, "yyyy-MM-dd"));
-  const [time, setTime] = useState("10:00");
+  const [time, setTime] = useState("14:00");
 
   if (!status) return null;
   const copy = COPY[status];

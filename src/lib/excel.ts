@@ -1,7 +1,7 @@
-import type { Client, ClientType } from "./types";
+import type { Client, ClientStatus, ClientType } from "./types";
 import { STATUS_LABEL } from "./types";
 import { ORIGINAL_FILE_KEY } from "./store";
-import { format } from "date-fns";
+import { format, addDays, setHours, setMinutes } from "date-fns";
 
 const norm = (s: unknown) =>
   String(s ?? "")
@@ -17,6 +17,8 @@ const MATCHERS: Record<string, string[]> = {
   zip: ["codigo postc", "codigo postal", "cod postal", "postc", "cep", "cp", "postal", "zip"],
   address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
+  statusProsegur: ["status_prosegur", "status prosegur", "status"],
+  agendadoPara: ["agendado_para", "agendado para", "agendamento", "scheduled"],
 };
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -46,6 +48,8 @@ export interface Cols {
   zip: number;
   address: number;
   type: number;
+  statusProsegur: number;
+  agendadoPara: number;
 }
 
 /**
