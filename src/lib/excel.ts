@@ -24,7 +24,9 @@ const MATCHERS: Record<string, string[]> = {
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
 function findColumn(headers: string[], key: keyof typeof MATCHERS): string | null {
-  const nh = headers.map((h) => ({ raw: h, n: norm(h) }));
+  // SheetJS suffixes duplicate headers (Contacto, Contacto_1) — match on the
+  // base name so a re-imported export still resolves both columns.
+  const nh = headers.map((h) => ({ raw: h, n: norm(h.replace(/_\d+$/, "")) }));
   const list = MATCHERS[key] ?? [];
   for (const m of list) {
     const exact = nh.find((h) => h.n === m);
@@ -61,7 +63,7 @@ export interface Cols {
  */
 export function locateColumns(headers: string[]): Cols {
   const idxOf = (raw: string | null) => (raw === null ? -1 : headers.indexOf(raw));
-  const contactoIdxs = headers.map((h, i) => (norm(h) === "contacto" ? i : -1)).filter((i) => i >= 0);
+  const contactoIdxs = headers.map((h, i) => (norm(h.replace(/_\d+$/, "")) === "contacto" ? i : -1)).filter((i) => i >= 0);
 
   let contract = -1;
   let phone = -1;
@@ -284,19 +286,27 @@ export async function exportWorkbook(clients: Client[], fileName: string | null)
     for (const sheetName of wb.SheetNames) {
       const ws = wb.Sheets[sheetName];
       if (!ws) continue;
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
-      if (rows.length === 0) continue;
-      const headers = Object.keys(rows[0]!);
-      const cols = locateColumns(headers);
-      const merged = rows.map((row) => {
-        const contract = cols.contract >= 0 ? String(row[headers[cols.contract]!] ?? "").trim() : "";
-        const name = cols.name >= 0 ? String(row[headers[cols.name]!] ?? "").trim() : "";
+      // Read as a position-based grid: the object-mode keys would be uniqKey'd
+      // (Contacto, Contacto_1) and break the column lookup. rawHeaders keep the
+      // real header names so contract/phone/status resolve exactly as on import.
+      const grid = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
+      if (grid.length < 2) continue;
+      const rawHeaders = (grid[0] ?? []).map((h) => String(h ?? ""));
+      const keys = uniqKeys(rawHeaders);
+      const cols = locateColumns(rawHeaders);
+      const merged = grid.slice(1).map((row) => {
+        const contract = cols.contract >= 0 ? String(row[cols.contract] ?? "").trim() : "";
+        const name = cols.name >= 0 ? String(row[cols.name] ?? "").trim() : "";
         const contractNumber = contract || `${sheetName}-${name}`;
         const c = byId.get(hashId(contractNumber));
-        return { ...row, ...(c ? extraColumns(c) : {}) };
+        const out: Record<string, unknown> = {};
+        keys.forEach((k, i) => {
+          out[k] = row[i] ?? "";
+        });
+        return { ...out, ...(c ? extraColumns(c) : {}) };
       });
       const extraKeys = Object.keys(extraColumns(clients[0] ?? ({ history: [], status: "pending" } as unknown as Client)));
-      const newWs = XLSX.utils.json_to_sheet(merged, { header: [...headers, ...extraKeys] });
+      const newWs = XLSX.utils.json_to_sheet(merged, { header: [...keys, ...extraKeys] });
       if (ws["!cols"]) newWs["!cols"] = ws["!cols"];
       wb.Sheets[sheetName] = newWs;
     }
