@@ -221,7 +221,7 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
         type: parseType(cols.type >= 0 ? row[cols.type] : ""),
         status,
         scheduledFor,
-        history: [],
+        history,
         lastModified: now,
         sheetName,
         originalData,
