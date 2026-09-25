@@ -208,7 +208,7 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       const history: HistoryEntry[] = [];
       const observacao = get(row, cols.observacaoUltima);
       if (observacao && status !== "pending") {
-        history.push({ timestamp: now, status, note: observacao, scheduledFor: scheduledFor ?? undefined });
+        history.push({ timestamp: now, status, note: observacao, scheduledFor });
       }
 
       clients.push({
