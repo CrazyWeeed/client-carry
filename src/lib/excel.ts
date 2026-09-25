@@ -1,4 +1,4 @@
-import type { Client, ClientStatus, ClientType } from "./types";
+import type { Client, ClientStatus, ClientType, HistoryEntry } from "./types";
 import { STATUS_LABEL } from "./types";
 import { ORIGINAL_FILE_KEY } from "./store";
 import { format, addDays, setHours, setMinutes } from "date-fns";
@@ -19,6 +19,7 @@ const MATCHERS: Record<string, string[]> = {
   type: ["tipo", "type", "segmento", "categoria"],
   statusProsegur: ["status_prosegur", "status prosegur", "status"],
   agendadoPara: ["agendado_para", "agendado para", "agendamento", "scheduled"],
+  observacaoUltima: ["observacao_ultima", "observacao ultima", "nota", "notas", "note"],
 };
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -52,6 +53,7 @@ export interface Cols {
   type: number;
   statusProsegur: number;
   agendadoPara: number;
+  observacaoUltima: number;
 }
 
 /**
@@ -98,6 +100,7 @@ export function locateColumns(headers: string[]): Cols {
     type: idxOf(findColumn(headers, "type")),
     statusProsegur: idxOf(findColumn(headers, "statusProsegur")),
     agendadoPara: idxOf(findColumn(headers, "agendadoPara")),
+    observacaoUltima: idxOf(findColumn(headers, "observacaoUltima")),
   };
 }
 
@@ -200,6 +203,13 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       // so a re-import restores Retirado / Recusado / Análise / Agendado + hora.
       const status = parseExcelStatus(cols.statusProsegur >= 0 ? row[cols.statusProsegur] : "");
       const scheduledFor = status === "scheduled" ? parseScheduledFor(cols.agendadoPara >= 0 ? row[cols.agendadoPara] : "") : null;
+      // Carry over the observation our own export wrote (Observacao_Ultima) so the note
+      // that goes with Retirado / Recusado / Análise / Agendado survives a re-import.
+      const history: HistoryEntry[] = [];
+      const observacao = get(row, cols.observacaoUltima);
+      if (observacao && status !== "pending") {
+        history.push({ timestamp: now, status, note: observacao, scheduledFor: scheduledFor ?? undefined });
+      }
 
       clients.push({
         id: hashId(contractNumber),

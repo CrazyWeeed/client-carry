@@ -72,7 +72,12 @@ export const useFieldStore = create<FieldState>()(
               // Keep the status carried by the sheet (our own export writes it back).
               status: inc.status,
               scheduledFor: inc.scheduledFor,
-              history: [{ timestamp: now, status: inc.status, note: "Importado do Excel", scheduledFor: inc.scheduledFor }],
+              // The sheet can carry the observation (Observacao_Ultima) as history — keep
+              // it so the note survives a clear + re-import. Only log the import itself
+              // when the sheet says nothing about this client.
+              history: inc.history.length
+                ? inc.history
+                : [{ timestamp: now, status: inc.status, note: "Importado do Excel", scheduledFor: inc.scheduledFor }],
               lastModified: now,
             });
             added++;
