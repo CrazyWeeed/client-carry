@@ -12,9 +12,9 @@ import { Phone, MapPin, Search, Check, X, CalendarClock, type LucideIcon } from 
 export const Route = createFileRoute("/cliente/$id")({
   head: () => ({
     meta: [
-      { title: "Cliente — Prosegur Field" },
+      { title: "Cliente — Client Carry" },
       { name: "description", content: "Ficha do cliente: ligar, ver no mapa e registar retirada, recusa, análise ou agendamento." },
-      { property: "og:title", content: "Cliente — Prosegur Field" },
+      { property: "og:title", content: "Cliente — Client Carry" },
       { property: "og:description", content: "Ficha do cliente: ligar, ver no mapa e registar retirada, recusa, análise ou agendamento." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

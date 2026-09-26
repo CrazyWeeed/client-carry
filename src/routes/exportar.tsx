@@ -10,9 +10,9 @@ import { STATUS_LABEL, type ClientStatus } from "@/lib/types";
 export const Route = createFileRoute("/exportar")({
   head: () => ({
     meta: [
-      { title: "Exportar Excel — Prosegur Field" },
+      { title: "Exportar Excel — Client Carry" },
       { name: "description", content: "Gera o Excel original com colunas de status, observações e agendamentos." },
-      { property: "og:title", content: "Exportar Excel — Prosegur Field" },
+      { property: "og:title", content: "Exportar Excel — Client Carry" },
       { property: "og:description", content: "Gera o Excel original com colunas de status, observações e agendamentos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -24,7 +24,7 @@ export const Route = createFileRoute("/exportar")({
 const ORDER: ClientStatus[] = ["withdrawn", "refused", "analysis", "scheduled", "pending"];
 
 const OUTPUT_COLUMNS = [
-  { label: "Status", col: "Status_Prosegur", hint: "estado em código: pending, scheduled…" },
+  { label: "Status", col: "Status_Carry", hint: "estado em código: pending, scheduled…" },
   { label: "Etiqueta", col: "Status_Label", hint: "o mesmo estado em português" },
   { label: "Data", col: "Status_Data", hint: "quando o estado mudou" },
   { label: "Notas", col: "Observacao_Ultima", hint: "a última observação registada" },
