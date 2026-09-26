@@ -91,10 +91,10 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
       <header className="relative flex items-center justify-between px-4 pt-4">
         <Link to="/" className="flex items-center gap-2 tap">
           <div className="grid size-9 place-items-center rounded-xl bg-accent/90 font-display text-lg font-bold text-ink shadow-lg shadow-accent/30">
-            P
+            C
           </div>
           <div className="leading-tight">
-            <p className="font-display text-[15px] font-bold tracking-tight">{title ?? "Prosegur Field"}</p>
+            <p className="font-display text-[15px] font-bold tracking-tight">{title ?? "Client Carry"}</p>
             <p className="text-[10px] tracking-[0.2em] text-steel uppercase">Operação de Campo</p>
           </div>
         </Link>
@@ -173,7 +173,7 @@ function BottomNav() {
   const active = { className: `${item} bg-accent text-ink` };
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-4">
-      <div className="glass grid grid-cols-4 gap-1.5 rounded-2xl p-1.5">
+      <div className="grid grid-cols-4 gap-1.5 rounded-2xl border border-border bg-ink p-1.5">
         <Link to="/" className={item} activeProps={active} activeOptions={{ exact: true }}>
           Início
         </Link>

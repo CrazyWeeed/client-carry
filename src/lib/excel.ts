@@ -17,7 +17,7 @@ const MATCHERS: Record<string, string[]> = {
   zip: ["codigo postc", "codigo postal", "cod postal", "postc", "cep", "cp", "postal", "zip"],
   address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
-  statusProsegur: ["status_prosegur", "status prosegur", "status"],
+  statusProsegur: ["status_carry", "status carry", "status_prosegur", "status prosegur", "status"],
   agendadoPara: ["agendado_para", "agendado para", "agendamento", "scheduled"],
   observacaoUltima: ["observacao_ultima", "observacao ultima", "nota", "notas", "note"],
 };
@@ -127,7 +127,7 @@ function parseType(v: unknown): ClientType {
   return "residential";
 }
 
-/** Status written by our own export (Status_Prosegur) — tolerates keys and PT labels. */
+/** Status written by our own export (Status_Carry; legacy files keep Status_Prosegur) — tolerates keys and PT labels. */
 function parseExcelStatus(v: unknown): ClientStatus {
   const n = norm(v);
   if (n.includes("retirad") || n === "withdrawn") return "withdrawn";
@@ -199,7 +199,7 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       keys.forEach((k, i) => {
         originalData[k] = row[i] ?? "";
       });
-      // Read back the status our own export wrote (Status_Prosegur / Agendado_Para),
+      // Read back the status our own export wrote (Status_Carry / Agendado_Para),
       // so a re-import restores Retirado / Recusado / Análise / Agendado + hora.
       const status = parseExcelStatus(cols.statusProsegur >= 0 ? row[cols.statusProsegur] : "");
       const scheduledFor = status === "scheduled" ? parseScheduledFor(cols.agendadoPara >= 0 ? row[cols.agendadoPara] : "") : null;
@@ -275,7 +275,7 @@ function extraColumns(c: Client) {
     .map((h) => `${fmt(h.timestamp)} ${STATUS_LABEL[h.status]}${h.note ? `: ${h.note}` : ""}`)
     .join(" | ");
   return {
-    Status_Prosegur: c.status,
+    Status_Carry: c.status,
     Status_Label: STATUS_LABEL[c.status],
     Status_Data: c.lastModified,
     Observacao_Ultima: last?.note ?? "",

@@ -9,9 +9,9 @@ import { STATUS_LABEL, TYPE_LABEL, type ClientStatus, type ClientType } from "@/
 export const Route = createFileRoute("/clientes")({
   head: () => ({
     meta: [
-      { title: "Lista de Clientes — Prosegur Field" },
+      { title: "Lista de Clientes — Client Carry" },
       { name: "description", content: "Todos os clientes com busca instantânea e filtros por status e tipo." },
-      { property: "og:title", content: "Lista de Clientes — Prosegur Field" },
+      { property: "og:title", content: "Lista de Clientes — Client Carry" },
       { property: "og:description", content: "Todos os clientes com busca instantânea e filtros por status e tipo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -40,7 +40,7 @@ function ClientsPage() {
     <AppShell title="Lista">
       <div className="glass flex items-center gap-2.5 rounded-2xl px-3.5 py-3">
         <span className="text-base text-steel">⌕</span>
-        <input value={q} onChange={(e) => setQ(e.target.value)} className="w-full bg-transparent text-[15px] outline-none placeholder:text-steel/70" placeholder="Buscar nome, contrato, telefone, CEP" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} className="w-full bg-transparent text-[15px] outline-none placeholder:text-steel/70" placeholder="Buscar nome, contrato, telefone, Código Postal" />
       </div>
 
       <div className="mt-3 flex gap-1.5 overflow-x-auto pb-1 pr-4 [scrollbar-width:none]">
@@ -56,7 +56,7 @@ function ClientsPage() {
         ))}
       </div>
 
-      <p className="mt-4 mb-2 text-[11px] tracking-[0.2em] text-steel uppercase">{list.length} clientes · por CEP</p>
+      <p className="mt-4 mb-2 text-[11px] tracking-[0.2em] text-steel uppercase">{list.length} clientes · por Código Postal</p>
       <div className="flex flex-col gap-2">
         {list.length === 0 ? (
           <EmptyState title="Nada por aqui" hint={clients.length === 0 ? "Importa o Excel pelo menu ⋮." : "Ajusta a busca ou os filtros."} />

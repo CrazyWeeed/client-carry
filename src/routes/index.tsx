@@ -9,10 +9,10 @@ import { searchClients } from "@/lib/search";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Prosegur Field — Operação de Campo" },
-      { name: "description", content: "Painel diário de retiradas: pendentes, agendados e próximos clientes por CEP." },
-      { property: "og:title", content: "Prosegur Field — Operação de Campo" },
-      { property: "og:description", content: "Painel diário de retiradas: pendentes, agendados e próximos clientes por CEP." },
+      { title: "Client Carry — Operação de Campo" },
+      { name: "description", content: "Painel diário de retiradas: pendentes, agendados e próximos clientes por Código Postal." },
+      { property: "og:title", content: "Client Carry — Operação de Campo" },
+      { property: "og:description", content: "Painel diário de retiradas: pendentes, agendados e próximos clientes por Código Postal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -63,7 +63,7 @@ function Dashboard() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           className="w-full bg-transparent text-[15px] outline-none placeholder:text-steel/70"
-          placeholder="Buscar nome, contrato, telefone, CEP"
+          placeholder="Buscar nome, contrato, telefone, Código Postal"
         />
         {q && (
           <button onClick={() => setQ("")} className="text-steel tap" aria-label="Limpar">
@@ -75,7 +75,7 @@ function Dashboard() {
       {q.trim() ? (
         <section className="mt-4 flex flex-col gap-2 animate-rise">
           {results.length === 0 ? (
-            <EmptyState title="Sem resultados" hint="Tenta outro nome, contrato ou CEP." />
+            <EmptyState title="Sem resultados" hint="Tenta outro nome, contrato ou Código Postal." />
           ) : (
             results.map((c) => <ClientRow key={c.id} client={c} />)
           )}
@@ -128,7 +128,7 @@ function Dashboard() {
           <section className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[11px] tracking-[0.2em] text-steel uppercase">Próximos clientes</p>
-              <span className="text-[10px] text-steel">por CEP · {queue.length} pendentes</span>
+              <span className="text-[10px] text-steel">por Código Postal · {queue.length} pendentes</span>
             </div>
             <div className="flex flex-col gap-2">
               {queue.length === 0 ? (
