@@ -9,9 +9,9 @@ import { searchClients } from "@/lib/search";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Client Carry — Operação de Campo" },
+      { title: "Gestão de clientes" },
       { name: "description", content: "Painel diário de retiradas: pendentes, agendados e próximos clientes por Código Postal." },
-      { property: "og:title", content: "Client Carry — Operação de Campo" },
+      { property: "og:title", content: "Gestão de clientes" },
       { property: "og:description", content: "Painel diário de retiradas: pendentes, agendados e próximos clientes por Código Postal." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

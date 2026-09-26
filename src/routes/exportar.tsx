@@ -10,9 +10,9 @@ import { STATUS_LABEL, type ClientStatus } from "@/lib/types";
 export const Route = createFileRoute("/exportar")({
   head: () => ({
     meta: [
-      { title: "Exportar Excel — Client Carry" },
+      { title: "Exportar Excel — Gestão de clientes" },
       { name: "description", content: "Gera o Excel original com colunas de status, observações e agendamentos." },
-      { property: "og:title", content: "Exportar Excel — Client Carry" },
+      { property: "og:title", content: "Exportar Excel — Gestão de clientes" },
       { property: "og:description", content: "Gera o Excel original com colunas de status, observações e agendamentos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

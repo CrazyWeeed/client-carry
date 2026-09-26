@@ -10,9 +10,9 @@ import type { Client } from "@/lib/types";
 export const Route = createFileRoute("/agendados")({
   head: () => ({
     meta: [
-      { title: "Agendados — Client Carry" },
+      { title: "Agendados — Gestão de clientes" },
       { name: "description", content: "Retornos agendados agrupados por dia: hoje, amanhã e próximos." },
-      { property: "og:title", content: "Agendados — Client Carry" },
+      { property: "og:title", content: "Agendados — Gestão de clientes" },
       { property: "og:description", content: "Retornos agendados agrupados por dia: hoje, amanhã e próximos." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

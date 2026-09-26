@@ -88,29 +88,28 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
       <div className="pointer-events-none absolute top-40 -left-20 size-64 rounded-full bg-amber/15 blur-3xl" />
       <div className="pointer-events-none absolute right-0 bottom-0 size-56 rounded-full bg-rose/10 blur-3xl" />
 
-      <header className="relative flex items-center justify-between px-4 pt-4">
-        <Link to="/" className="flex items-center gap-2 tap">
-          <div className="grid size-9 place-items-center rounded-xl bg-accent/90 font-display text-lg font-bold text-ink shadow-lg shadow-accent/30">
-            C
-          </div>
-          <div className="leading-tight">
-            <p className="font-display text-[15px] font-bold tracking-tight">{title ?? "Client Carry"}</p>
-            <p className="text-[10px] tracking-[0.2em] text-steel uppercase">Operação de Campo</p>
-          </div>
-        </Link>
-        <div className="flex items-center gap-2">
-          <div className="glass-soft flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-medium text-mist">
-            <span className="size-1.5 rounded-full bg-mint" /> Offline
-          </div>
-          <button
-            onClick={() => setMenuOpen(true)}
-            aria-label="Menu"
-            className="glass-soft grid size-9 place-items-center rounded-xl text-lg leading-none text-steel tap"
-          >
-            ⋮
-          </button>
+      <header className="relative flex items-center justify-center px-4 pt-4">
+        <div className="glass-soft absolute left-4 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-medium text-mist">
+          <span className="size-1.5 rounded-full bg-mint" /> Offline
         </div>
+        <Link to="/" className="text-center tap">
+          <p className="font-display text-[17px] leading-tight font-bold tracking-tight">Gestão de clientes</p>
+          <p className="text-[10px] tracking-[0.16em] text-steel">By Luiz Albuquerque</p>
+        </Link>
+        <button
+          onClick={() => setMenuOpen(true)}
+          aria-label="Menu"
+          className="glass-soft absolute right-4 grid size-9 place-items-center rounded-xl text-lg leading-none text-steel tap"
+        >
+          ⋮
+        </button>
       </header>
+
+      {title && (
+        <div className="relative px-4 pt-3">
+          <div className="glass-soft mx-auto w-fit rounded-full px-3 py-1 text-[11px] font-semibold text-mist">{title}</div>
+        </div>
+      )}
 
       <main className="relative px-4 pt-4 pb-28">{children}</main>
 
