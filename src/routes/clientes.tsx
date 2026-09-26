@@ -9,9 +9,9 @@ import { STATUS_LABEL, TYPE_LABEL, type ClientStatus, type ClientType } from "@/
 export const Route = createFileRoute("/clientes")({
   head: () => ({
     meta: [
-      { title: "Lista de Clientes — Client Carry" },
+      { title: "Lista de Clientes — Gestão de clientes" },
       { name: "description", content: "Todos os clientes com busca instantânea e filtros por status e tipo." },
-      { property: "og:title", content: "Lista de Clientes — Client Carry" },
+      { property: "og:title", content: "Lista de Clientes — Gestão de clientes" },
       { property: "og:description", content: "Todos os clientes com busca instantânea e filtros por status e tipo." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
