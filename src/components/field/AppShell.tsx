@@ -20,16 +20,9 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
     setHydrated();
   }, [hydrated, setHydrated]);
 
-  useEffect(() => {
-    if (!hydrated) return;
-    const run = () => {
-      const n = releaseDueSchedules();
-      if (n > 0) toast.info(`${n} agendado${n > 1 ? "s" : ""} voltou à fila de pendentes`);
-    };
-    run();
-    const t = setInterval(run, 60_000);
-    return () => clearInterval(t);
-  }, [hydrated, releaseDueSchedules]);
+  // Overdue schedules stay "scheduled" and appear under "Atrasados" in /agendados.
+  void releaseDueSchedules;
+
 
   const onFile = async (file: File) => {
     setBusy(true);
