@@ -143,9 +143,28 @@ export const useFieldStore = create<FieldState>()(
   ),
 );
 
-/** Sort helper: pending clients ordered by postal code. */
+/** Postal code → number (PT "4700-123" → 4700123). Missing codes sort last. */
+export function zipNum(zip: string): number {
+  const d = String(zip ?? "").replace(/\D/g, "");
+  if (!d) return Number.MAX_SAFE_INTEGER;
+  return Number(d.slice(0, 7).padEnd(7, "0"));
+}
+
+/** Sort helper: ordered numerically by postal code. */
 export function sortByZip<T extends { zipCode: string }>(list: T[]): T[] {
-  return [...list].sort((a, b) => a.zipCode.localeCompare(b.zipCode, "pt", { numeric: true }));
+  return [...list].sort((a, b) => zipNum(a.zipCode) - zipNum(b.zipCode));
+}
+
+/** Closest client to a postal code (double check: smallest numeric distance, tie → lower code). */
+function nearest(list: Client[], from: string): Client | null {
+  const f = zipNum(from);
+  let best: Client | null = null;
+  let bestD = Infinity;
+  for (const c of sortByZip(list)) {
+    const d = Math.abs(zipNum(c.zipCode) - f);
+    if (d < bestD) { best = c; bestD = d; }
+  }
+  return best;
 }
 
 export function pendingQueue(clients: Client[]): Client[] {
@@ -153,8 +172,9 @@ export function pendingQueue(clients: Client[]): Client[] {
 }
 
 export function nextPendingAfter(clients: Client[], currentId: string): Client | null {
+  const cur = clients.find((c) => c.id === currentId);
   const queue = pendingQueue(clients).filter((c) => c.id !== currentId);
-  return queue[0] ?? null;
+  return cur ? nearest(queue, cur.zipCode) : (queue[0] ?? null);
 }
 
 /** Open work queue (pending + scheduled), ordered by postal code. */
@@ -162,10 +182,18 @@ export function openQueue(clients: Client[]): Client[] {
   return sortByZip(clients.filter((c) => c.status === "pending" || c.status === "scheduled"));
 }
 
-/** Next open client after the current one (by postal code), without changing status. */
+// Clients already skipped this session, so "Avançar" never bounces back and forth.
+const skipped = new Set<string>();
+
+/** Nearest open client to the current one by postal code, without changing status. */
 export function nextOpenAfter(clients: Client[], current: Client): Client | null {
-  const all = sortByZip([...openQueue(clients).filter((c) => c.id !== current.id), current]);
-  const i = all.findIndex((c) => c.id === current.id);
-  const rest = [...all.slice(i + 1), ...all.slice(0, i)];
-  return rest[0] ?? null;
+  skipped.add(current.id);
+  const open = openQueue(clients).filter((c) => c.id !== current.id);
+  let candidates = open.filter((c) => !skipped.has(c.id));
+  if (!candidates.length) {
+    skipped.clear();
+    skipped.add(current.id);
+    candidates = open;
+  }
+  return nearest(candidates, current.zipCode);
 }
