@@ -156,3 +156,16 @@ export function nextPendingAfter(clients: Client[], currentId: string): Client |
   const queue = pendingQueue(clients).filter((c) => c.id !== currentId);
   return queue[0] ?? null;
 }
+
+/** Open work queue (pending + scheduled), ordered by postal code. */
+export function openQueue(clients: Client[]): Client[] {
+  return sortByZip(clients.filter((c) => c.status === "pending" || c.status === "scheduled"));
+}
+
+/** Next open client after the current one (by postal code), without changing status. */
+export function nextOpenAfter(clients: Client[], current: Client): Client | null {
+  const all = sortByZip([...openQueue(clients).filter((c) => c.id !== current.id), current]);
+  const i = all.findIndex((c) => c.id === current.id);
+  const rest = [...all.slice(i + 1), ...all.slice(0, i)];
+  return rest[0] ?? null;
+}

@@ -5,9 +5,9 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/field/AppShell";
 import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
-import { nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
+import { nextOpenAfter, nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
-import { Phone, MapPin, Search, Check, X, CalendarClock, type LucideIcon } from "lucide-react";
+import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
   head: () => ({
@@ -145,7 +145,18 @@ function ClientPage() {
         </div>
       </section>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t border-border bg-ink/95 px-4 py-4 backdrop-blur-md">
+      <div className="h-40" />
+      <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t border-border bg-ink px-4 py-3">
+        <button
+          onClick={() => {
+            const next = nextOpenAfter(clients, client);
+            if (next) navigate({ to: "/cliente/$id", params: { id: next.id } });
+            else toast("Não há mais clientes pendentes ou agendados");
+          }}
+          className="glass-soft mb-2 flex min-h-11 w-full items-center justify-center gap-2 rounded-xl font-display text-[13px] font-semibold text-accent tap"
+        >
+          Avançar sem alterar <ChevronRight className="size-4" />
+        </button>
         <div className="grid grid-cols-4 gap-1.5">
           <ActionBtn onClick={() => setAction("analysis")} className="glass-soft text-mist" icon={Search} label="Análise" />
           <ActionBtn onClick={() => setAction("withdrawn")} className="border border-mint/30 bg-mint/20 text-mint" icon={Check} label="Retirado" />
