@@ -72,6 +72,7 @@ export interface Cols {
  */
 export function locateColumns(headers: string[]): Cols {
   const idxOf = (raw: string | null) => (raw === null ? -1 : headers.indexOf(raw));
+  const lastIdx = (raw: string | null) => (raw === null ? -1 : headers.lastIndexOf(raw));
   const contactoIdxs = headers.map((h, i) => (norm(h.replace(/_\d+$/, "")) === "contacto" ? i : -1)).filter((i) => i >= 0);
 
   let contract = -1;
@@ -105,9 +106,9 @@ export function locateColumns(headers: string[]): Cols {
     zip: idxOf(findColumn(headers, "zip")),
     address: idxOf(findColumn(headers, "address")),
     type: idxOf(findColumn(headers, "type")),
-    statusProsegur: idxOf(findColumn(headers, "statusProsegur")),
-    agendadoPara: idxOf(findColumn(headers, "agendadoPara")),
-    observacaoUltima: idxOf(findColumn(headers, "observacaoUltima")),
+    statusProsegur: lastIdx(findColumn(headers, "statusProsegur")),
+    agendadoPara: lastIdx(findColumn(headers, "agendadoPara")),
+    observacaoUltima: lastIdx(findColumn(headers, "observacaoUltima")),
   };
 }
 
