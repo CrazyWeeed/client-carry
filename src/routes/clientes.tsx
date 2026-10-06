@@ -18,7 +18,7 @@ export const Route = createFileRoute("/clientes")({
     ],
   }),
   validateSearch: (s: Record<string, unknown>): { status?: string } =>
-    typeof s.status === "string" ? { status: s.status } : {},
+    typeof s["status"] === "string" ? { status: s["status"] } : {},
   component: ClientsPage,
 });
 
