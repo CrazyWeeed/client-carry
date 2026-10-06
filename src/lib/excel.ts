@@ -17,10 +17,14 @@ const MATCHERS: Record<string, string[]> = {
   zip: ["codigo postc", "codigo postal", "cod postal", "postc", "cep", "cp", "postal", "zip"],
   address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
-  statusProsegur: ["status_carry", "status carry", "status_prosegur", "status prosegur", "status"],
+  statusProsegur: ["status_prosegur", "status prosegur", "status_carry", "status carry", "status"],
   agendadoPara: ["agendado_para", "agendado para", "agendamento", "scheduled"],
   observacaoUltima: ["observacao_ultima", "observacao ultima", "nota", "notas", "note"],
 };
+
+// App-written columns: if an old export duplicated them (Status_Carry, Status_Carry_1),
+// the LAST copy is the newest value — never the stale first one.
+const LAST_WINS = new Set(["statusProsegur", "agendadoPara", "observacaoUltima"]);
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -28,13 +32,16 @@ function findColumn(headers: string[], key: keyof typeof MATCHERS): string | nul
   // SheetJS suffixes duplicate headers (Contacto, Contacto_1) — match on the
   // base name so a re-imported export still resolves both columns.
   const nh = headers.map((h) => ({ raw: h, n: norm(h.replace(/_\d+$/, "")) }));
+  const pick = LAST_WINS.has(key) ? [...nh].reverse() : nh;
   const list = MATCHERS[key] ?? [];
   for (const m of list) {
-    const exact = nh.find((h) => h.n === m);
+    const exact = pick.find((h) => h.n === m);
     if (exact) return exact.raw;
   }
   // Short tokens ("id", "cp", "n.") are only ever taken literally — never as a
   // substring, otherwise "Validade" or "Identificação" would win the match.
+  // App-written columns are only ever matched exactly (avoids "Status_Label").
+  if (LAST_WINS.has(key)) return null;
   for (const m of list) {
     if (m.length < 4) continue;
     const re = new RegExp(`(^|[^a-z0-9])${escapeRe(m)}`);
@@ -65,6 +72,7 @@ export interface Cols {
  */
 export function locateColumns(headers: string[]): Cols {
   const idxOf = (raw: string | null) => (raw === null ? -1 : headers.indexOf(raw));
+  const lastIdx = (raw: string | null) => (raw === null ? -1 : headers.lastIndexOf(raw));
   const contactoIdxs = headers.map((h, i) => (norm(h.replace(/_\d+$/, "")) === "contacto" ? i : -1)).filter((i) => i >= 0);
 
   let contract = -1;
@@ -98,9 +106,9 @@ export function locateColumns(headers: string[]): Cols {
     zip: idxOf(findColumn(headers, "zip")),
     address: idxOf(findColumn(headers, "address")),
     type: idxOf(findColumn(headers, "type")),
-    statusProsegur: idxOf(findColumn(headers, "statusProsegur")),
-    agendadoPara: idxOf(findColumn(headers, "agendadoPara")),
-    observacaoUltima: idxOf(findColumn(headers, "observacaoUltima")),
+    statusProsegur: lastIdx(findColumn(headers, "statusProsegur")),
+    agendadoPara: lastIdx(findColumn(headers, "agendadoPara")),
+    observacaoUltima: lastIdx(findColumn(headers, "observacaoUltima")),
   };
 }
 
@@ -268,6 +276,12 @@ export function loadOriginalFile(): ArrayBuffer | null {
 
 const fmt = (iso: string | null | undefined) => (iso ? format(new Date(iso), "dd/MM/yyyy HH:mm") : "");
 
+/** The only columns the exported file ever contains, in this order. */
+export const OFFICIAL_COLUMNS = [
+  "Contrato", "Nome cliente", "Tipo", "Contacto", "Codigo postal", "Morada", "Painel", "Notas",
+  "Status_Prosegur", "Status_Label", "Status_Data", "Observacao_Ultima", "Agendado_Para", "Historico_Resumido",
+] as const;
+
 function extraColumns(c: Client) {
   const last = c.history[0];
   const resumo = c.history
@@ -275,7 +289,7 @@ function extraColumns(c: Client) {
     .map((h) => `${fmt(h.timestamp)} ${STATUS_LABEL[h.status]}${h.note ? `: ${h.note}` : ""}`)
     .join(" | ");
   return {
-    Status_Carry: c.status,
+    Status_Prosegur: c.status,
     Status_Label: STATUS_LABEL[c.status],
     Status_Data: c.lastModified,
     Observacao_Ultima: last?.note ?? "",
@@ -284,57 +298,41 @@ function extraColumns(c: Client) {
   };
 }
 
+/** Value of an original column by base header name (ignores SheetJS "_1" suffixes). */
+function original(c: Client, base: string): unknown {
+  const k = Object.keys(c.originalData).find((key) => norm(key.replace(/_\d+$/, "")) === base);
+  return k ? c.originalData[k] : "";
+}
+
+function officialRow(c: Client): Record<string, unknown> {
+  const fallback = c.contractNumber === `${c.sheetName}-${c.name}`;
+  return {
+    Contrato: fallback ? "" : c.contractNumber,
+    "Nome cliente": c.name === "(sem nome)" ? "" : c.name,
+    Tipo: c.type === "commercial" ? "Negócio" : "Residencial",
+    Contacto: c.phone,
+    "Codigo postal": c.zipCode,
+    Morada: c.address,
+    Painel: original(c, "painel"),
+    Notas: original(c, "notas"),
+    ...extraColumns(c),
+  };
+}
+
 export async function exportWorkbook(clients: Client[], fileName: string | null) {
   const XLSX = await import("xlsx");
-  const original = loadOriginalFile();
-  const byId = new Map(clients.map((c) => [c.id, c]));
   const stamp = format(new Date(), "yyyyMMdd-HHmm");
   const outName = `${(fileName ?? "clientes").replace(/\.xlsx?$/i, "")}_atualizado_${stamp}.xlsx`;
-
-  if (original) {
-    const wb = XLSX.read(original, { type: "array" });
-    for (const sheetName of wb.SheetNames) {
-      const ws = wb.Sheets[sheetName];
-      if (!ws) continue;
-      // Read as a position-based grid: the object-mode keys would be uniqKey'd
-      // (Contacto, Contacto_1) and break the column lookup. rawHeaders keep the
-      // real header names so contract/phone/status resolve exactly as on import.
-      const grid = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: "" });
-      if (grid.length < 2) continue;
-      const rawHeaders = (grid[0] ?? []).map((h) => String(h ?? ""));
-      const keys = uniqKeys(rawHeaders);
-      const cols = locateColumns(rawHeaders);
-      const merged = grid.slice(1).map((row) => {
-        const contract = cols.contract >= 0 ? String(row[cols.contract] ?? "").trim() : "";
-        const name = cols.name >= 0 ? String(row[cols.name] ?? "").trim() : "";
-        const contractNumber = contract || `${sheetName}-${name}`;
-        const c = byId.get(hashId(contractNumber));
-        const out: Record<string, unknown> = {};
-        keys.forEach((k, i) => {
-          out[k] = row[i] ?? "";
-        });
-        return { ...out, ...(c ? extraColumns(c) : {}) };
-      });
-      const extraKeys = Object.keys(extraColumns(clients[0] ?? ({ history: [], status: "pending" } as unknown as Client)));
-      const newWs = XLSX.utils.json_to_sheet(merged, { header: [...keys, ...extraKeys] });
-      if (ws["!cols"]) newWs["!cols"] = ws["!cols"];
-      wb.Sheets[sheetName] = newWs;
-    }
-    XLSX.writeFile(wb, outName);
-    return outName;
-  }
-
-  // No original: build a fresh workbook grouped by sheet.
+  // Sheets keep their original order; every sheet gets exactly the 14 official columns.
+  const order: string[] = [];
+  const original = loadOriginalFile();
+  if (original) order.push(...XLSX.read(original, { type: "array", bookSheets: true }).SheetNames);
+  const groups = new Map<string, Client[]>(order.map((n) => [n, []]));
+  for (const c of clients) groups.set(c.sheetName, [...(groups.get(c.sheetName) ?? []), c]);
   const wb = XLSX.utils.book_new();
-  const groups = new Map<string, Client[]>();
-  for (const c of clients) {
-    const g = groups.get(c.sheetName) ?? [];
-    g.push(c);
-    groups.set(c.sheetName, g);
-  }
   for (const [sheetName, list] of groups) {
-    const rows = list.map((c) => ({ ...c.originalData, ...extraColumns(c) }));
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), sheetName.slice(0, 31));
+    const ws = XLSX.utils.json_to_sheet(list.map(officialRow), { header: [...OFFICIAL_COLUMNS] });
+    XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0, 31));
   }
   XLSX.writeFile(wb, outName);
   return outName;

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/field/AppShell";
 import { ClientRow, EmptyState } from "@/components/field/ClientRow";
 import { sortByZip, useFieldStore } from "@/lib/store";
@@ -17,6 +17,8 @@ export const Route = createFileRoute("/clientes")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
+  validateSearch: (s: Record<string, unknown>): { status?: string } =>
+    typeof s["status"] === "string" ? { status: s["status"] } : {},
   component: ClientsPage,
 });
 
@@ -25,8 +27,11 @@ const TYPES: ClientType[] = ["residential", "commercial"];
 
 function ClientsPage() {
   const clients = useFieldStore((s) => s.clients);
+  const search = Route.useSearch();
+  const initial = STATUSES.includes(search.status as ClientStatus) ? (search.status as ClientStatus) : "all";
   const [q, setQ] = useState("");
-  const [status, setStatus] = useState<ClientStatus | "all">("all");
+  const [status, setStatus] = useState<ClientStatus | "all">(initial);
+  useEffect(() => setStatus(initial), [initial]);
   const [type, setType] = useState<ClientType | "all">("all");
 
   const list = useMemo(() => {

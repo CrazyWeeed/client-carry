@@ -24,7 +24,7 @@ export const Route = createFileRoute("/exportar")({
 const ORDER: ClientStatus[] = ["withdrawn", "refused", "analysis", "scheduled", "pending"];
 
 const OUTPUT_COLUMNS = [
-  { label: "Status", col: "Status_Carry", hint: "estado em código: pending, scheduled…" },
+  { label: "Status", col: "Status_Prosegur", hint: "estado em código: pending, scheduled…" },
   { label: "Etiqueta", col: "Status_Label", hint: "o mesmo estado em português" },
   { label: "Data", col: "Status_Data", hint: "quando o estado mudou" },
   { label: "Notas", col: "Observacao_Ultima", hint: "a última observação registada" },

@@ -83,11 +83,11 @@ function Dashboard() {
       ) : (
         <>
           <div className="mt-4 grid grid-cols-5 gap-1.5">
-            <Counter n={counts.pending} label="Pend." tone="text-accent" />
-            <Counter n={counts.today} label="Hoje" tone="text-amber" />
-            <Counter n={counts.analysis} label="Análise" tone="text-mist" />
-            <Counter n={counts.refused} label="Recus." tone="text-rose" />
-            <Counter n={counts.withdrawn} label="Retir." tone="text-mint" />
+            <Counter n={counts.pending} label="Pend." tone="text-accent" status="pending" />
+            <Counter n={counts.today} label="Hoje" tone="text-amber" status="scheduled" />
+            <Counter n={counts.analysis} label="Análise" tone="text-mist" status="analysis" />
+            <Counter n={counts.refused} label="Recus." tone="text-rose" status="refused" />
+            <Counter n={counts.withdrawn} label="Retir." tone="text-mint" status="withdrawn" />
           </div>
 
           <button
@@ -150,11 +150,11 @@ function Dashboard() {
   );
 }
 
-function Counter({ n, label, tone }: { n: number; label: string; tone: string }) {
+function Counter({ n, label, tone, status }: { n: number; label: string; tone: string; status: string }) {
   return (
-    <div className="glass diag rounded-xl px-2 py-2.5 text-center">
+    <Link to="/clientes" search={{ status }} className="glass diag block rounded-xl px-2 py-2.5 text-center tap">
       <p className={`font-display text-xl leading-none font-bold ${tone}`}>{n}</p>
       <p className="mt-1 text-[9px] tracking-wide text-steel uppercase">{label}</p>
-    </div>
+    </Link>
   );
 }
