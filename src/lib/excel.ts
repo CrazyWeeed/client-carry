@@ -19,13 +19,14 @@ const MATCHERS: Record<string, string[]> = {
   address: ["morado", "morada", "endereco", "address", "rua", "direccion"],
   type: ["tipo", "type", "segmento", "categoria"],
   statusProsegur: ["status_prosegur", "status prosegur", "status_carry", "status carry", "status"],
+  statusLabel: ["status_label", "status label"],
   agendadoPara: ["agendado_para", "agendado para", "agendamento", "scheduled"],
   observacaoUltima: ["observacao_ultima", "observacao ultima", "nota", "notas", "note"],
 };
 
 // App-written columns: if an old export duplicated them (Status_Carry, Status_Carry_1),
 // the LAST copy is the newest value — never the stale first one.
-const LAST_WINS = new Set(["statusProsegur", "agendadoPara", "observacaoUltima"]);
+const LAST_WINS = new Set(["statusProsegur", "statusLabel", "agendadoPara", "observacaoUltima"]);
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -61,6 +62,7 @@ export interface Cols {
   address: number;
   type: number;
   statusProsegur: number;
+  statusLabel: number;
   agendadoPara: number;
   observacaoUltima: number;
 }
@@ -110,6 +112,7 @@ export function locateColumns(headers: string[]): Cols {
     address: idxOf(findColumn(headers, "address")),
     type: idxOf(findColumn(headers, "type")),
     statusProsegur: lastIdx(findColumn(headers, "statusProsegur")),
+    statusLabel: lastIdx(findColumn(headers, "statusLabel")),
     agendadoPara: lastIdx(findColumn(headers, "agendadoPara")),
     observacaoUltima: lastIdx(findColumn(headers, "observacaoUltima")),
   };
@@ -212,8 +215,12 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       });
       // Read back the status our own export wrote (Status_Carry / Agendado_Para),
       // so a re-import restores Retirado / Recusado / Análise / Agendado + hora.
-      const status = parseExcelStatus(cols.statusProsegur >= 0 ? row[cols.statusProsegur] : "");
-      const scheduledFor = status === "scheduled" ? parseScheduledFor(cols.agendadoPara >= 0 ? row[cols.agendadoPara] : "") : null;
+      // Status_Prosegur first; if empty, Status_Label; a filled Agendado_Para on an
+      // otherwise open row means the client is scheduled.
+      let status = parseExcelStatus(get(row, cols.statusProsegur) || get(row, cols.statusLabel));
+      const rawSched = parseScheduledFor(get(row, cols.agendadoPara));
+      if (status === "pending" && rawSched) status = "scheduled";
+      const scheduledFor = status === "scheduled" ? rawSched : null;
       // Carry over the observation our own export wrote (Observacao_Ultima) so the note
       // that goes with Retirado / Recusado / Análise / Agendado survives a re-import.
       const history: HistoryEntry[] = [];
