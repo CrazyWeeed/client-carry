@@ -11,6 +11,7 @@ const norm = (s: unknown) =>
     .trim();
 
 const MATCHERS: Record<string, string[]> = {
+  idCliente: ["id_cliente", "id cliente"],
   contract: ["contrato", "contract", "n contrato", "nº contrato", "num contrato", "numero", "n.", "id"],
   name: ["nome", "name", "cliente", "customer", "titular"],
   phone: ["telefone", "telemovel", "tel", "phone", "contacto", "contato", "movel"],
@@ -52,6 +53,7 @@ function findColumn(headers: string[], key: keyof typeof MATCHERS): string | nul
 }
 
 export interface Cols {
+  idCliente: number;
   contract: number;
   name: number;
   phone: number;
@@ -100,6 +102,7 @@ export function locateColumns(headers: string[]): Cols {
   }
 
   return {
+    idCliente: idxOf(findColumn(headers, "idCliente")),
     contract,
     name: idxOf(findColumn(headers, "name")),
     phone,
@@ -221,6 +224,7 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
 
       clients.push({
         id: hashId(contractNumber),
+        idCliente: get(row, cols.idCliente),
         contractNumber,
         name: name || "(sem nome)",
         phone,
@@ -278,7 +282,7 @@ const fmt = (iso: string | null | undefined) => (iso ? format(new Date(iso), "dd
 
 /** The only columns the exported file ever contains, in this order. */
 export const OFFICIAL_COLUMNS = [
-  "Contrato", "Nome cliente", "Tipo", "Contacto", "Codigo postal", "Morada", "Painel", "Notas",
+  "ID_Cliente", "Contrato", "Nome cliente", "Tipo", "Contacto", "Codigo postal", "Morada", "Painel", "Notas",
   "Status_Prosegur", "Status_Label", "Status_Data", "Observacao_Ultima", "Agendado_Para", "Historico_Resumido",
 ] as const;
 
@@ -307,6 +311,7 @@ function original(c: Client, base: string): unknown {
 function officialRow(c: Client): Record<string, unknown> {
   const fallback = c.contractNumber === `${c.sheetName}-${c.name}`;
   return {
+    ID_Cliente: c.idCliente ?? original(c, "id_cliente"),
     Contrato: fallback ? "" : c.contractNumber,
     "Nome cliente": c.name === "(sem nome)" ? "" : c.name,
     Tipo: c.type === "commercial" ? "Negócio" : "Residencial",
@@ -323,7 +328,7 @@ export async function exportWorkbook(clients: Client[], fileName: string | null)
   const XLSX = await import("xlsx");
   const stamp = format(new Date(), "yyyyMMdd-HHmm");
   const outName = `${(fileName ?? "clientes").replace(/\.xlsx?$/i, "")}_atualizado_${stamp}.xlsx`;
-  // Sheets keep their original order; every sheet gets exactly the 14 official columns.
+  // Sheets keep their original order; every sheet gets exactly the official columns.
   const order: string[] = [];
   const original = loadOriginalFile();
   if (original) order.push(...XLSX.read(original, { type: "array", bookSheets: true }).SheetNames);

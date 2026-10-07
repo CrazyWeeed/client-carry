@@ -8,3 +8,5 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+
+- Treat `ID_Cliente` as imported/exported display metadata only; internal identity and merges remain contract-based to preserve existing status and history behavior.

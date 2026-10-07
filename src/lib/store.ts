@@ -56,6 +56,7 @@ export const useFieldStore = create<FieldState>()(
             map.set(inc.id, {
               ...existing,
               id: inc.id,
+              ...(inc.idCliente || existing.idCliente ? { idCliente: inc.idCliente || existing.idCliente } : {}),
               contractNumber: inc.contractNumber,
               name: inc.name || existing.name,
               phone: inc.phone || existing.phone,

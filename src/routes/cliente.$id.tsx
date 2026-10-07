@@ -81,6 +81,11 @@ function ClientPage() {
       </div>
 
       <div className="glass rounded-2xl p-4 animate-rise">
+        {client.idCliente ? (
+          <p className="mb-1 text-[11px] font-semibold text-steel">
+            ID Cliente <span className="text-accent">{client.idCliente}</span>
+          </p>
+        ) : null}
         <p className="text-[10px] tracking-[0.2em] text-steel uppercase">Contrato</p>
         <p className="font-display text-2xl font-bold tracking-tight text-accent">#{client.contractNumber}</p>
         <div className="mt-2 flex items-start justify-between gap-3">
