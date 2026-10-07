@@ -10,6 +10,8 @@ export interface HistoryEntry {
 
 export interface Client {
   id: string;
+  /** Visual identifier imported from Excel; never used as the internal key. */
+  idCliente?: string;
   contractNumber: string;
   name: string;
   phone: string;

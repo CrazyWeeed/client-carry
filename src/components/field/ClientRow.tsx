@@ -29,9 +29,12 @@ export function ClientRow({ client, showTime }: { client: Client; showTime?: boo
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="truncate font-display text-[15px] font-semibold tracking-tight">{client.name}</p>
+        <p className="truncate font-display text-[15px] font-semibold tracking-tight">
+          {client.idCliente ? <span className="text-accent">{client.idCliente} — </span> : null}
+          {client.name}
+        </p>
         <p className="truncate text-[11px] text-steel">
-          #{client.contractNumber} · {TYPE_LABEL[client.type]}
+          Contrato: {client.contractNumber} · {TYPE_LABEL[client.type]}
           {showTime && client.scheduledFor ? ` · ${format(new Date(client.scheduledFor), "dd/MM")}` : ""}
         </p>
       </div>
