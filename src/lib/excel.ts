@@ -1,6 +1,6 @@
 import type { Client, ClientStatus, ClientType, HistoryEntry } from "./types";
 import { STATUS_LABEL } from "./types";
-import { ORIGINAL_FILE_KEY } from "./store";
+import { ORIGINAL_FILE_KEY, dedupeClients } from "./store";
 import { format, addDays, setHours, setMinutes } from "date-fns";
 
 const norm = (s: unknown) =>
@@ -340,7 +340,7 @@ export async function exportWorkbook(clients: Client[], fileName: string | null)
   const original = loadOriginalFile();
   if (original) order.push(...XLSX.read(original, { type: "array", bookSheets: true }).SheetNames);
   const groups = new Map<string, Client[]>(order.map((n) => [n, []]));
-  for (const c of clients) groups.set(c.sheetName, [...(groups.get(c.sheetName) ?? []), c]);
+  for (const c of dedupeClients(clients)) groups.set(c.sheetName, [...(groups.get(c.sheetName) ?? []), c]);
   const wb = XLSX.utils.book_new();
   for (const [sheetName, list] of groups) {
     const ws = XLSX.utils.json_to_sheet(list.map(officialRow), { header: [...OFFICIAL_COLUMNS] });

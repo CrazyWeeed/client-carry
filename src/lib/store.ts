@@ -84,7 +84,11 @@ export const useFieldStore = create<FieldState>()(
             added++;
           }
         }
-        set({ clients: Array.from(map.values()), importedAt: now, importedFileName: fileName });
+        // One client = one record. Rows imported by an older version (e.g. ID_Cliente
+        // read as the contract) duplicate the same person under another id: collapse
+        // them onto the current contract, keeping the most recent status + history.
+        const currentIds = new Set(incoming.map((c) => c.id));
+        set({ clients: dedupeClients(Array.from(map.values()), currentIds), importedAt: now, importedFileName: fileName });
         return { added, updated };
       },
 
@@ -197,4 +201,31 @@ export function nextOpenAfter(clients: Client[], current: Client): Client | null
     candidates = open;
   }
   return nearest(candidates, current.zipCode);
+}
+
+/** Collapse records of the same person (same phone + name) into a single one. */
+export function dedupeClients(clients: Client[], preferIds: Set<string> = new Set()): Client[] {
+  const key = (c: Client) => {
+    const p = normPhone(c.phone);
+    const n = c.name.trim().toLowerCase();
+    return p && n && n !== "(sem nome)" ? `${p}|${n}` : null;
+  };
+  const groups = new Map<string, Client[]>();
+  const out: Client[] = [];
+  for (const c of clients) {
+    const k = key(c);
+    if (!k) { out.push(c); continue; }
+    groups.set(k, [...(groups.get(k) ?? []), c]);
+  }
+  for (const g of groups.values()) {
+    if (g.length === 1) { out.push(g[0]!); continue; }
+    const base = g.find((c) => preferIds.has(c.id)) ?? g.find((c) => !c.contractNumber.startsWith(`${c.sheetName}-`)) ?? g[0]!;
+    const latest = [...g].sort((a, b) => {
+      // A worked status (anything but pending) beats an untouched pending copy.
+      const w = Number(b.status !== "pending") - Number(a.status !== "pending");
+      return w || b.lastModified.localeCompare(a.lastModified);
+    })[0]!;
+    out.push({ ...base, status: latest.status, scheduledFor: latest.scheduledFor, history: latest.history, lastModified: latest.lastModified });
+  }
+  return out;
 }

@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { useFieldStore } from "@/lib/store";
+import { useFieldStore, dedupeClients } from "@/lib/store";
 import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
 
@@ -16,7 +16,12 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
 
   useEffect(() => {
     if (hydrated) return;
-    useFieldStore.persist.rehydrate();
+    void Promise.resolve(useFieldStore.persist.rehydrate()).then(() => {
+      // Repair duplicates saved by older versions: one client = one record.
+      const cur = useFieldStore.getState().clients;
+      const clean = dedupeClients(cur);
+      if (clean.length !== cur.length) useFieldStore.setState({ clients: clean });
+    });
     setHydrated();
   }, [hydrated, setHydrated]);
 
