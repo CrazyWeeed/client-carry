@@ -202,3 +202,30 @@ export function nextOpenAfter(clients: Client[], current: Client): Client | null
   }
   return nearest(candidates, current.zipCode);
 }
+
+/** Collapse records of the same person (same phone + name) into a single one. */
+export function dedupeClients(clients: Client[], preferIds: Set<string> = new Set()): Client[] {
+  const key = (c: Client) => {
+    const p = normPhone(c.phone);
+    const n = c.name.trim().toLowerCase();
+    return p && n && n !== "(sem nome)" ? `${p}|${n}` : null;
+  };
+  const groups = new Map<string, Client[]>();
+  const out: Client[] = [];
+  for (const c of clients) {
+    const k = key(c);
+    if (!k) { out.push(c); continue; }
+    groups.set(k, [...(groups.get(k) ?? []), c]);
+  }
+  for (const g of groups.values()) {
+    if (g.length === 1) { out.push(g[0]!); continue; }
+    const base = g.find((c) => preferIds.has(c.id)) ?? g.find((c) => !c.contractNumber.startsWith(`${c.sheetName}-`)) ?? g[0]!;
+    const latest = [...g].sort((a, b) => {
+      // A worked status (anything but pending) beats an untouched pending copy.
+      const w = Number(b.status !== "pending") - Number(a.status !== "pending");
+      return w || b.lastModified.localeCompare(a.lastModified);
+    })[0]!;
+    out.push({ ...base, status: latest.status, scheduledFor: latest.scheduledFor, history: latest.history, lastModified: latest.lastModified });
+  }
+  return out;
+}
