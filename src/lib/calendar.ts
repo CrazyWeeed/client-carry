@@ -1,4 +1,5 @@
 import type { Client } from "./types";
+import { fullAddress } from "./address";
 
 /** Evento de retorno. Sem telefone e sem morada: o calendário sincroniza com o celular. */
 function eventFor(c: Client) {
@@ -30,6 +31,7 @@ export function googleCalendarUrl(c: Client): string | null {
     text: ev.summary,
     dates: `${utc(ev.start)}/${utc(ev.end)}`,
     details: ev.description,
+    location: fullAddress(c),
   });
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

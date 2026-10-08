@@ -8,6 +8,7 @@ import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
 import { nextOpenAfter, nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
+import { cleanAddress, fullAddress } from "@/lib/address";
 import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, PhoneMissed, PhoneOff, Ban, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
@@ -57,7 +58,7 @@ function ClientPage() {
       ? `+351${digits}`
       : `+${digits}`
     : "";
-  const mapsQuery = encodeURIComponent([client.address, client.zipCode].filter(Boolean).join(", "));
+  const mapsQuery = encodeURIComponent(fullAddress(client));
 
   const confirm = (status: ActionStatus, note: string, scheduledFor: string | null) => {
     setStatus(client.id, status, note, scheduledFor);
@@ -128,7 +129,7 @@ function ClientPage() {
             <p className="mt-0.5 text-[13px] font-medium">{client.zipCode || "—"}</p>
           </div>
         </div>
-        <p className="mt-2 text-[13px] text-mist/85">{client.address || "Sem morada"}</p>
+        <p className="mt-2 text-[13px] text-mist/85">{cleanAddress(client.address) || "Sem morada"}</p>
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <a
