@@ -3,6 +3,20 @@ import { persist, createJSONStorage } from "zustand/middleware";
 import type { Client, ClientStatus, HistoryEntry } from "./types";
 
 export const ORIGINAL_FILE_KEY = "prosegur-field:original-xlsx";
+export const AUTO_NOTE = "Importado do Excel";
+
+/** localStorage that tells the UI when a write fails (quota full) instead of losing data silently. */
+const safeStorage = {
+  getItem: (k: string) => localStorage.getItem(k),
+  setItem: (k: string, v: string) => {
+    try {
+      localStorage.setItem(k, v);
+    } catch {
+      window.dispatchEvent(new CustomEvent("field-storage-error"));
+    }
+  },
+  removeItem: (k: string) => localStorage.removeItem(k),
+};
 
 const normPhone = (s: unknown) => {
   const d = String(s ?? "").replace(/\D/g, "");
@@ -67,11 +81,12 @@ export const useFieldStore = create<FieldState>()(
               originalData: inc.originalData,
               // The sheet's status (Agendado/Retirado/Recusado/Análise) wins over a local
               // one, except that a local Retirado is never overwritten.
+              // History is never dropped: union of what the sheet carries and what the app recorded.
+              history: mergeHistory(inc.history, existing.history),
               ...(inc.status !== "pending" && existing.status !== "withdrawn"
                 ? {
                     status: inc.status,
                     scheduledFor: inc.scheduledFor,
-                    history: inc.history.length ? [...inc.history, ...existing.history] : existing.history,
                     lastModified: now,
                   }
                 : {}),
@@ -88,7 +103,7 @@ export const useFieldStore = create<FieldState>()(
               // when the sheet says nothing about this client.
               history: inc.history.length
                 ? inc.history
-                : [{ timestamp: now, status: inc.status, note: "Importado do Excel", scheduledFor: inc.scheduledFor }],
+                : [],
               lastModified: now,
             });
             added++;
@@ -151,12 +166,25 @@ export const useFieldStore = create<FieldState>()(
     }),
     {
       name: "prosegur-field:v1",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => safeStorage),
       skipHydration: true,
       partialize: (s) => ({ clients: s.clients, importedAt: s.importedAt, importedFileName: s.importedFileName }),
     },
   ),
 );
+
+/** Union of two histories (no duplicates), most recent first. */
+export function mergeHistory(a: HistoryEntry[], b: HistoryEntry[]): HistoryEntry[] {
+  const seen = new Set<string>();
+  const out: HistoryEntry[] = [];
+  for (const h of [...a, ...b]) {
+    const k = `${h.timestamp}|${h.status}|${h.note}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(h);
+  }
+  return out.sort((x, y) => y.timestamp.localeCompare(x.timestamp));
+}
 
 /** Postal code → number (PT "4700-123" → 4700123). Missing codes sort last. */
 export function zipNum(zip: string): number {
@@ -213,23 +241,30 @@ export function nextOpenAfter(clients: Client[], current: Client): Client | null
   return nearest(candidates, current.zipCode);
 }
 
-/** Collapse records of the same person (same phone + name) into a single one. */
+/**
+ * Collapse duplicated records. Conservative on purpose:
+ * - Records with a REAL contract are never merged with anything (different contract = different service).
+ * - Only records whose contract is synthetic ("folha-nome", i.e. no contract in the sheet)
+ *   are merged, and only when phone + name + postal code all match.
+ */
 export function dedupeClients(clients: Client[], preferIds: Set<string> = new Set()): Client[] {
+  const isSynthetic = (c: Client) => c.contractNumber === `${c.sheetName}-${c.name}`;
   const key = (c: Client) => {
     const p = normPhone(c.phone);
     const n = c.name.trim().toLowerCase();
-    return p && n && n !== "(sem nome)" ? `${p}|${n}` : null;
+    const z = c.zipCode.replace(/\D/g, "");
+    return p && n && n !== "(sem nome)" && z ? `${p}|${n}|${z}` : null;
   };
   const groups = new Map<string, Client[]>();
   const out: Client[] = [];
   for (const c of clients) {
-    const k = key(c);
+    const k = isSynthetic(c) ? key(c) : null;
     if (!k) { out.push(c); continue; }
     groups.set(k, [...(groups.get(k) ?? []), c]);
   }
   for (const g of groups.values()) {
     if (g.length === 1) { out.push(g[0]!); continue; }
-    const base = g.find((c) => preferIds.has(c.id)) ?? g.find((c) => !c.contractNumber.startsWith(`${c.sheetName}-`)) ?? g[0]!;
+    const base = g.find((c) => preferIds.has(c.id)) ?? g[0]!;
     const latest = [...g].sort((a, b) => {
       // A worked status (anything but pending) beats an untouched pending copy.
       const w = Number(b.status !== "pending") - Number(a.status !== "pending");

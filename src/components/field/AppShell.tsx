@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { useFieldStore, dedupeClients } from "@/lib/store";
+import { useFieldStore, dedupeClients, AUTO_NOTE } from "@/lib/store";
 import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
 
@@ -19,11 +19,23 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
     void Promise.resolve(useFieldStore.persist.rehydrate()).then(() => {
       // Repair duplicates saved by older versions: one client = one record.
       const cur = useFieldStore.getState().clients;
-      const clean = dedupeClients(cur);
-      if (clean.length !== cur.length) useFieldStore.setState({ clients: clean });
+      const clean = dedupeClients(cur).map((c) => ({
+        ...c,
+        history: c.history.filter((h) => h.note !== AUTO_NOTE),
+      }));
+      useFieldStore.setState({ clients: clean });
     });
     setHydrated();
   }, [hydrated, setHydrated]);
+
+  useEffect(() => {
+    const onErr = () =>
+      toast.error("Armazenamento do telemóvel cheio", {
+        description: "Os últimos registos podem não ter sido guardados. Exporta o Excel já.",
+      });
+    window.addEventListener("field-storage-error", onErr);
+    return () => window.removeEventListener("field-storage-error", onErr);
+  }, []);
 
   // Overdue schedules stay "scheduled" and appear under "Atrasados" in /agendados.
   void releaseDueSchedules;

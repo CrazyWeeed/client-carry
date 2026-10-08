@@ -26,11 +26,15 @@ function ScheduledPage() {
 
   const groups = useMemo(() => {
     const sched = clients
-      .filter((c) => c.status === "scheduled" && c.scheduledFor)
-      .sort((a, b) => (a.scheduledFor ?? "").localeCompare(b.scheduledFor ?? ""));
+      .filter((c) => c.status === "scheduled")
+      .sort((a, b) => (a.scheduledFor ?? "9999").localeCompare(b.scheduledFor ?? "9999"));
     const map = new Map<string, Client[]>();
     for (const c of sched) {
-      const d = new Date(c.scheduledFor!);
+      if (!c.scheduledFor) {
+        map.set("Sem data", [...(map.get("Sem data") ?? []), c]);
+        continue;
+      }
+      const d = new Date(c.scheduledFor);
       const key = isPast(d) ? "Atrasados" : isToday(d) ? "Hoje" : isTomorrow(d) ? "Amanhã" : format(d, "EEEE, dd/MM", { locale: pt });
       map.set(key, [...(map.get(key) ?? []), c]);
     }

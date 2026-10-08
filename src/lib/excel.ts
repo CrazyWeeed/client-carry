@@ -1,6 +1,6 @@
 import type { Client, ClientStatus, ClientType, HistoryEntry } from "./types";
 import { STATUS_LABEL } from "./types";
-import { ORIGINAL_FILE_KEY, dedupeClients } from "./store";
+import { ORIGINAL_FILE_KEY, AUTO_NOTE, dedupeClients, mergeHistory } from "./store";
 import { format, addDays, setHours, setMinutes } from "date-fns";
 
 const norm = (s: unknown) =>
@@ -118,6 +118,27 @@ export function locateColumns(headers: string[]): Cols {
   };
 }
 
+/**
+ * Every column whose base name (without SheetJS "_N" suffix) is one of `names`.
+ * Old exports duplicate app columns (Status_Prosegur, Status_Prosegur_1, ...) and only
+ * one copy is filled, so we read ALL copies and take the last non-empty value.
+ */
+function indicesFor(headers: string[], names: string[]): number[] {
+  const out: number[] = [];
+  headers.forEach((h, i) => {
+    if (names.includes(norm(h.replace(/_\d+$/, "")))) out.push(i);
+  });
+  return out;
+}
+
+function lastNonEmpty(row: unknown[], idxs: number[]): string {
+  for (let k = idxs.length - 1; k >= 0; k--) {
+    const v = String(row[idxs[k]!] ?? "").trim();
+    if (v) return v;
+  }
+  return "";
+}
+
 /** Unique keys mirroring SheetJS duplicate-header suffixing (Contacto, Contacto_1...). */
 function uniqKeys(headers: string[]): string[] {
   const seen = new Map<string, number>();
@@ -173,6 +194,25 @@ function parseScheduledFor(v: unknown): string | null {
   return null;
 }
 
+function parseHistoryJson(raw: string): HistoryEntry[] {
+  if (!raw) return [];
+  try {
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .filter((h) => h && typeof h.timestamp === "string" && typeof h.status === "string")
+      .map((h) => ({
+        timestamp: h.timestamp,
+        status: h.status as ClientStatus,
+        note: typeof h.note === "string" ? h.note : "",
+        scheduledFor: typeof h.scheduledFor === "string" ? h.scheduledFor : null,
+      }))
+      .filter((h) => h.note !== AUTO_NOTE);
+  } catch {
+    return [];
+  }
+}
+
 export interface ParseResult {
   clients: Client[];
   sheets: number;
@@ -195,6 +235,14 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
     const keys = uniqKeys(rawHeaders);
     const cols = locateColumns(rawHeaders);
     const get = (row: unknown[], i: number) => (i >= 0 ? String(row[i] ?? "").trim() : "");
+    // Status_Carry and Status_Label agree with each other and with Agendado_Para in real
+    // files; Status_Prosegur is the legacy column and can be stale. Read Carry first.
+    const stCarry = indicesFor(rawHeaders, ["status_carry", "status carry"]);
+    const stStatus = indicesFor(rawHeaders, MATCHERS.statusProsegur!);
+    const stLabel = indicesFor(rawHeaders, MATCHERS.statusLabel!);
+    const stAgend = indicesFor(rawHeaders, MATCHERS.agendadoPara!);
+    const stObs = indicesFor(rawHeaders, MATCHERS.observacaoUltima!);
+    const stHistJson = indicesFor(rawHeaders, ["historico_json"]);
 
     for (const row of grid.slice(1)) {
       const name = get(row, cols.name);
@@ -217,15 +265,19 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
       // so a re-import restores Retirado / Recusado / Análise / Agendado + hora.
       // Status_Prosegur first; if empty, Status_Label; a filled Agendado_Para on an
       // otherwise open row means the client is scheduled.
-      let status = parseExcelStatus(get(row, cols.statusProsegur) || get(row, cols.statusLabel));
-      const rawSched = parseScheduledFor(get(row, cols.agendadoPara));
+      let status = parseExcelStatus(
+        lastNonEmpty(row, stCarry) || lastNonEmpty(row, stLabel) || lastNonEmpty(row, stStatus),
+      );
+      const rawSched = parseScheduledFor(lastNonEmpty(row, stAgend));
       if (status === "pending" && rawSched) status = "scheduled";
       const scheduledFor = status === "scheduled" ? rawSched : null;
       // Carry over the observation our own export wrote (Observacao_Ultima) so the note
       // that goes with Retirado / Recusado / Análise / Agendado survives a re-import.
-      const history: HistoryEntry[] = [];
-      const observacao = get(row, cols.observacaoUltima);
-      if (observacao && status !== "pending") {
+      // Full history comes back from the Historico_JSON column our export writes.
+      // Fallback for files without it: the last non-empty observation becomes one entry.
+      const history: HistoryEntry[] = parseHistoryJson(lastNonEmpty(row, stHistJson));
+      const observacao = lastNonEmpty(row, stObs);
+      if (!history.length && observacao && observacao !== AUTO_NOTE) {
         history.push({ timestamp: now, status, note: observacao, scheduledFor });
       }
 
@@ -291,10 +343,13 @@ const fmt = (iso: string | null | undefined) => (iso ? format(new Date(iso), "dd
 export const OFFICIAL_COLUMNS = [
   "ID_Cliente", "Contrato", "Nome cliente", "Tipo", "Contacto", "Codigo postal", "Morada", "Painel", "Notas",
   "Status_Prosegur", "Status_Label", "Status_Data", "Observacao_Ultima", "Agendado_Para", "Historico_Resumido",
+  "Historico_JSON",
 ] as const;
 
 function extraColumns(c: Client) {
-  const last = c.history[0];
+  const sorted = [...c.history].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  // Latest NON-EMPTY observation: a status change without a note must not erase the last note.
+  const lastNote = sorted.find((h) => h.note && h.note !== AUTO_NOTE)?.note ?? "";
   const resumo = c.history
     .slice(0, 3)
     .map((h) => `${fmt(h.timestamp)} ${STATUS_LABEL[h.status]}${h.note ? `: ${h.note}` : ""}`)
@@ -303,7 +358,8 @@ function extraColumns(c: Client) {
     Status_Prosegur: c.status,
     Status_Label: STATUS_LABEL[c.status],
     Status_Data: c.lastModified,
-    Observacao_Ultima: last?.note ?? "",
+    Observacao_Ultima: lastNote,
+    Historico_JSON: JSON.stringify(sorted.filter((h) => h.note !== AUTO_NOTE)),
     Agendado_Para: c.status === "scheduled" ? fmt(c.scheduledFor) : "",
     Historico_Resumido: resumo,
   };
