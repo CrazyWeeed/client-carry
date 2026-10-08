@@ -65,6 +65,16 @@ export const useFieldStore = create<FieldState>()(
               type: inc.type,
               sheetName: inc.sheetName,
               originalData: inc.originalData,
+              // The sheet's status (Agendado/Retirado/Recusado/Análise) wins over a local
+              // one, except that a local Retirado is never overwritten.
+              ...(inc.status !== "pending" && existing.status !== "withdrawn"
+                ? {
+                    status: inc.status,
+                    scheduledFor: inc.scheduledFor,
+                    history: inc.history.length ? [...inc.history, ...existing.history] : existing.history,
+                    lastModified: now,
+                  }
+                : {}),
             });
             updated++;
           } else {
