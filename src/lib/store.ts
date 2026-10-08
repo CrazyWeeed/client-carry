@@ -84,7 +84,11 @@ export const useFieldStore = create<FieldState>()(
             added++;
           }
         }
-        set({ clients: Array.from(map.values()), importedAt: now, importedFileName: fileName });
+        // One client = one record. Rows imported by an older version (e.g. ID_Cliente
+        // read as the contract) duplicate the same person under another id: collapse
+        // them onto the current contract, keeping the most recent status + history.
+        const currentIds = new Set(incoming.map((c) => c.id));
+        set({ clients: dedupeClients(Array.from(map.values()), currentIds), importedAt: now, importedFileName: fileName });
         return { added, updated };
       },
 
