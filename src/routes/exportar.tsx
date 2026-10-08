@@ -103,10 +103,9 @@ function ExportPage() {
         </ul>
       </section>
 
-      {importedFileName && (
+      {importedAt && (
         <p className="mt-6 text-[12px] text-steel">
-          Base: <span className="text-foreground">{importedFileName}</span>
-          {importedAt ? ` · importada em ${format(new Date(importedAt), "dd/MM HH:mm")}` : ""}
+          Última importação: {format(new Date(importedAt), "dd/MM HH:mm")}
         </p>
       )}
 

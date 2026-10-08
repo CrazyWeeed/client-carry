@@ -99,8 +99,8 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
           <span className="size-1.5 rounded-full bg-mint" /> Offline
         </div>
         <Link to="/" className="text-center tap">
-          <p className="font-display text-[17px] leading-tight font-bold tracking-tight">Gestão de clientes</p>
-          <p className="text-[11px] tracking-[0.16em] text-steel">By Luiz Albuquerque</p>
+          <p className="font-display text-[15px] leading-tight font-semibold tracking-[0.28em] uppercase">Field Connect</p>
+          <p className="mt-0.5 text-[11px] tracking-[0.12em] text-steel">By L.A. Tech Braga</p>
         </Link>
         <button
           onClick={() => setMenuOpen(true)}
@@ -138,11 +138,6 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
           <MenuButton onClick={onExport} disabled={busy} label="Exportar Excel" hint="Ficheiro original + colunas de status" />
           <MenuButton onClick={onClear} disabled={busy} label="Apagar dados" hint="Remove tudo deste telemóvel" danger />
         </div>
-        {importedFileName && (
-          <p className="mt-4 text-center text-[11px] text-steel">
-            Ficheiro: <span className="text-mist">{importedFileName}</span> · {clients.length} clientes
-          </p>
-        )}
       </Sheet>
     </div>
   );
