@@ -10,6 +10,8 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
   const clients = useFieldStore((s) => s.clients);
   const importedFileName = useFieldStore((s) => s.importedFileName);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [updateWorker, setUpdateWorker] = useState<ServiceWorker | null>(null);
+  const applyingUpdate = useRef(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -27,6 +29,28 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
     });
     setHydrated();
   }, [hydrated, setHydrated]);
+
+  // Offline support + "nova versão" notice. Never reloads by itself: only after the user taps "Atualizar".
+  useEffect(() => {
+    if (!import.meta.env.PROD || !("serviceWorker" in navigator)) return;
+    const onControllerChange = () => {
+      if (applyingUpdate.current) window.location.reload();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", onControllerChange);
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => {
+        if (reg.waiting && navigator.serviceWorker.controller) setUpdateWorker(reg.waiting);
+        reg.addEventListener("updatefound", () => {
+          const nw = reg.installing;
+          nw?.addEventListener("statechange", () => {
+            if (nw.state === "installed" && navigator.serviceWorker.controller) setUpdateWorker(nw);
+          });
+        });
+      })
+      .catch(() => {});
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+  }, []);
 
   useEffect(() => {
     const onErr = () =>
@@ -95,9 +119,6 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
     <div className="relative mx-auto min-h-dvh w-full max-w-md overflow-x-hidden">
 
       <header className="relative flex items-center justify-center px-4 pt-4">
-        <div className="glass-soft absolute left-4 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium text-mist">
-          <span className="size-1.5 rounded-full bg-mint" /> Offline
-        </div>
         <Link to="/" className="text-center tap">
           <p className="font-display text-[15px] leading-tight font-semibold tracking-[0.28em] uppercase">Field Connect</p>
           <p className="mt-0.5 text-[11px] tracking-[0.12em] text-steel">By L.A. Tech Braga</p>
@@ -114,6 +135,21 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
       {title && (
         <div className="relative px-4 pt-3">
           <div className="glass-soft mx-auto w-fit rounded-full px-3 py-1 text-[11px] font-semibold text-mist">{title}</div>
+        </div>
+      )}
+
+      {updateWorker && (
+        <div className="relative mx-4 mt-3 flex items-center justify-between gap-3 rounded-lg border border-border bg-muted px-3.5 py-2.5">
+          <span className="text-[13px] text-mist">Nova versão disponível</span>
+          <button
+            onClick={() => {
+              applyingUpdate.current = true;
+              updateWorker.postMessage("SKIP_WAITING");
+            }}
+            className="rounded-md bg-accent px-3 py-1.5 text-[12px] font-semibold text-ink tap"
+          >
+            Atualizar
+          </button>
         </div>
       )}
 

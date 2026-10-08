@@ -8,7 +8,7 @@ import { ClientRow, EmptyState } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
 import { useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, type Client } from "@/lib/types";
-import { googleCalendarUrl } from "@/lib/calendar";
+import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 
 export const Route = createFileRoute("/agendados")({
   head: () => ({
@@ -85,15 +85,13 @@ function ScheduledPage() {
                         Reagendar
                       </button>
                     ) : null}
-                    {googleCalendarUrl(c) && (
-                      <a
-                        href={googleCalendarUrl(c)!}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="glass-soft flex min-h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-semibold text-sky tap"
+                    {hasCalendarEvent(c) && (
+                      <button
+                        onClick={() => void addToCalendar(c)}
+                        className="glass-soft flex min-h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-semibold text-mist tap"
                       >
-                        + Google Agenda
-                      </a>
+                        Calendário
+                      </button>
                     )}
                   </div>
                 </div>

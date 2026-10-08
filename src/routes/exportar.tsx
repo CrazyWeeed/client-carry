@@ -21,7 +21,7 @@ export const Route = createFileRoute("/exportar")({
   component: ExportPage,
 });
 
-const ORDER: ClientStatus[] = ["pending", "scheduled", "analysis", "refused", "withdrawn"];
+const ORDER: ClientStatus[] = ["pending", "noAnswer", "wrongPhone", "notAssigned", "scheduled", "analysis", "refused", "withdrawn"];
 
 // What the file gains, in plain words. Column names kept for whoever reads the file.
 const ADDED = [

@@ -82,11 +82,12 @@ export const useFieldStore = create<FieldState>()(
               // one, except that a local Retirado is never overwritten.
               // History is never dropped: union of what the sheet carries and what the app recorded.
               history: mergeHistory(inc.history, existing.history),
-              ...(inc.status !== "pending" && existing.status !== "withdrawn"
+              // Most recent change wins: an older file cannot undo a newer change made in the app.
+              ...(inc.status !== "pending" && existing.status !== "withdrawn" && inc.lastModified >= existing.lastModified
                 ? {
                     status: inc.status,
                     scheduledFor: inc.scheduledFor,
-                    lastModified: now,
+                    lastModified: inc.lastModified,
                   }
                 : {}),
             });
@@ -249,3 +250,35 @@ export function dedupeClients(clients: Client[], preferIds: Set<string> = new Se
   }
   return out;
 }
+
+/** How many times the client was called without answer (from the history). */
+export function attemptCount(c: Client): number {
+  return c.history.filter((h) => h.status === "noAnswer").length;
+}
+
+/** Last "não atendeu" timestamp (ISO) or null. */
+export function lastAttemptAt(c: Client): string | null {
+  const last = c.history.find((h) => h.status === "noAnswer");
+  return last ? last.timestamp : null;
+}
+
+/**
+ * "Para ligar" order: no answer first (fewest attempts, then the one called longest ago),
+ * then wrong number, then not assigned.
+ */
+export function callQueue(clients: Client[]): Client[] {
+  const rank: Record<string, number> = { noAnswer: 0, wrongPhone: 1, notAssigned: 2 };
+  return clients
+    .filter((c) => c.status in rank)
+    .sort((a, b) => {
+      const r = rank[a.status]! - rank[b.status]!;
+      if (r) return r;
+      if (a.status === "noAnswer") {
+        const n = attemptCount(a) - attemptCount(b);
+        if (n) return n;
+        return (lastAttemptAt(a) ?? "").localeCompare(lastAttemptAt(b) ?? "");
+      }
+      return a.lastModified.localeCompare(b.lastModified);
+    });
+}
+

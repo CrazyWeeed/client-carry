@@ -22,7 +22,7 @@ export const Route = createFileRoute("/clientes")({
   component: ClientsPage,
 });
 
-const STATUSES: ClientStatus[] = ["pending", "scheduled", "analysis", "refused", "withdrawn"];
+const STATUSES: ClientStatus[] = ["pending", "noAnswer", "wrongPhone", "notAssigned", "scheduled", "analysis", "refused", "withdrawn"];
 const TYPES: ClientType[] = ["residential", "commercial"];
 
 function ClientsPage() {

@@ -7,8 +7,8 @@ import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
 import { nextOpenAfter, nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
-import { googleCalendarUrl } from "@/lib/calendar";
-import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, type LucideIcon } from "lucide-react";
+import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
+import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, PhoneMissed, PhoneOff, Ban, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
   head: () => ({
@@ -64,18 +64,16 @@ function ClientPage() {
     setAction(null);
     const next = nextPendingAfter(useFieldStore.getState().clients, client.id);
     // Calendar link for the appointment just made, shown in the toast so it is reachable after navigating away.
-    const calUrl =
-      status === "scheduled" && scheduledFor
-        ? googleCalendarUrl({
-            ...client,
-            status,
-            scheduledFor,
-            history: [{ timestamp: new Date().toISOString(), status, note, scheduledFor }, ...client.history],
-          })
-        : null;
+    const calReady = status === "scheduled" && !!scheduledFor;
+    const calClient = {
+      ...client,
+      status,
+      scheduledFor,
+      history: [{ timestamp: new Date().toISOString(), status, note, scheduledFor }, ...client.history],
+    };
     toast.success(`${client.name}: ${STATUS_LABEL[status]}`, {
       description: next ? `Próximo: ${next.name}` : "Fila de pendentes terminada",
-      action: calUrl ? { label: "Google Agenda", onClick: () => window.open(calUrl, "_blank") } : undefined,
+      action: calReady ? { label: "Adicionar ao calendário", onClick: () => void addToCalendar(calClient) } : undefined,
       duration: 10000,
     });
     if (next) navigate({ to: "/cliente/$id", params: { id: next.id } });
@@ -111,15 +109,13 @@ function ClientPage() {
         {client.status === "scheduled" && client.scheduledFor && (
           <p className="mt-2 text-[12px] text-amber">Retorno: {format(new Date(client.scheduledFor), "dd/MM/yyyy 'às' HH:mm")}</p>
         )}
-        {client.status === "scheduled" && googleCalendarUrl(client) && (
-          <a
-            href={googleCalendarUrl(client)!}
-            target="_blank"
-            rel="noreferrer"
-            className="glass-soft mt-2 flex min-h-10 items-center justify-center rounded-xl text-[12px] font-semibold text-sky tap"
+        {client.status === "scheduled" && hasCalendarEvent(client) && (
+          <button
+            onClick={() => void addToCalendar(client)}
+            className="glass-soft mt-2 flex min-h-10 w-full items-center justify-center rounded-xl text-[12px] font-semibold text-mist tap"
           >
-            Adicionar ao Google Agenda
-          </a>
+            Adicionar ao calendário
+          </button>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
@@ -185,11 +181,16 @@ function ClientPage() {
         >
           Avançar sem alterar <ChevronRight className="size-4" />
         </button>
-        <div className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-3 gap-1.5">
+          <ActionBtn onClick={() => setAction("noAnswer")} className="glass-soft text-mist" icon={PhoneMissed} label="Não atendeu" />
+          <ActionBtn onClick={() => setAction("wrongPhone")} className="glass-soft text-amber" icon={PhoneOff} label="Tel. errado" />
+          <ActionBtn onClick={() => setAction("notAssigned")} className="glass-soft text-steel" icon={Ban} label="Não atribuído" />
+        </div>
+        <div className="mt-1.5 grid grid-cols-4 gap-1.5">
+          <ActionBtn onClick={() => setAction("scheduled")} className="border border-amber/30 bg-amber/20 text-amber" icon={CalendarClock} label="Agendar" />
           <ActionBtn onClick={() => setAction("analysis")} className="glass-soft text-mist" icon={Search} label="Análise" />
           <ActionBtn onClick={() => setAction("withdrawn")} className="border border-mint/30 bg-mint/20 text-mint" icon={Check} label="Retirado" />
           <ActionBtn onClick={() => setAction("refused")} className="border border-rose/30 bg-rose/20 text-rose" icon={X} label="Recusado" />
-          <ActionBtn onClick={() => setAction("scheduled")} className="border border-amber/30 bg-amber/20 text-amber" icon={CalendarClock} label="Agendar" />
         </div>
       </div>
 

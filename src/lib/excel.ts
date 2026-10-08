@@ -168,6 +168,9 @@ function parseExcelStatus(v: unknown): ClientStatus {
   if (n.includes("retirad") || n === "withdrawn") return "withdrawn";
   if (n.includes("recusad") || n === "refused") return "refused";
   if (n.includes("analise") || n.includes("analysis")) return "analysis";
+  if (n.includes("nao atendeu") || n === "noanswer") return "noAnswer";
+  if (n.includes("telefone errado") || n === "wrongphone") return "wrongPhone";
+  if (n.includes("nao atribu") || n === "notassigned") return "notAssigned";
   if (n.includes("agendad") || n.includes("scheduled")) return "scheduled";
   return "pending";
 }
@@ -238,11 +241,12 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
     // Status_Carry and Status_Label agree with each other and with Agendado_Para in real
     // files; Status_Prosegur is the legacy column and can be stale. Read Carry first.
     const stCarry = indicesFor(rawHeaders, ["status_carry", "status carry"]);
-    const stStatus = indicesFor(rawHeaders, MATCHERS.statusProsegur!);
-    const stLabel = indicesFor(rawHeaders, MATCHERS.statusLabel!);
-    const stAgend = indicesFor(rawHeaders, MATCHERS.agendadoPara!);
-    const stObs = indicesFor(rawHeaders, MATCHERS.observacaoUltima!);
+    const stStatus = indicesFor(rawHeaders, MATCHERS["statusProsegur"]!);
+    const stLabel = indicesFor(rawHeaders, MATCHERS["statusLabel"]!);
+    const stAgend = indicesFor(rawHeaders, MATCHERS["agendadoPara"]!);
+    const stObs = indicesFor(rawHeaders, MATCHERS["observacaoUltima"]!);
     const stHistJson = indicesFor(rawHeaders, ["historico_json"]);
+    const stData = indicesFor(rawHeaders, ["status_data"]);
 
     for (const row of grid.slice(1)) {
       const name = get(row, cols.name);
@@ -293,7 +297,11 @@ export async function parseWorkbook(buffer: ArrayBuffer): Promise<ParseResult> {
         status,
         scheduledFor,
         history,
-        lastModified: now,
+        // Date of the last status change as written in the file (decides which copy is newer).
+        lastModified: (() => {
+          const d = new Date(lastNonEmpty(row, stData));
+          return Number.isNaN(d.getTime()) ? now : d.toISOString();
+        })(),
         sheetName,
         originalData,
       });

@@ -1,4 +1,4 @@
-export type ClientStatus = "pending" | "withdrawn" | "refused" | "scheduled" | "analysis";
+export type ClientStatus = "pending" | "withdrawn" | "refused" | "scheduled" | "analysis" | "noAnswer" | "wrongPhone" | "notAssigned";
 export type ClientType = "residential" | "commercial";
 
 export interface HistoryEntry {
@@ -32,6 +32,9 @@ export const STATUS_LABEL: Record<ClientStatus, string> = {
   refused: "Recusado",
   scheduled: "Agendado",
   analysis: "Em Análise",
+  noAnswer: "Não atendeu",
+  wrongPhone: "Telefone errado",
+  notAssigned: "Não atribuído",
 };
 
 export const TYPE_LABEL: Record<ClientType, string> = {
@@ -46,4 +49,7 @@ export const STATUS_STYLE: Record<ClientStatus, { chip: string; dot: string; tex
   refused: { chip: "bg-rose/15 border-rose/30 text-rose", dot: "bg-rose", text: "text-rose" },
   scheduled: { chip: "bg-sky/15 border-sky/30 text-sky", dot: "bg-sky", text: "text-sky" },
   analysis: { chip: "bg-mist/10 border-mist/30 text-mist", dot: "bg-accent", text: "text-mist" },
+  noAnswer: { chip: "bg-mist/10 border-mist/30 text-mist", dot: "bg-mist", text: "text-mist" },
+  wrongPhone: { chip: "bg-amber/10 border-amber/25 text-amber", dot: "bg-amber", text: "text-amber" },
+  notAssigned: { chip: "bg-steel/10 border-steel/30 text-steel", dot: "bg-steel", text: "text-steel" },
 };

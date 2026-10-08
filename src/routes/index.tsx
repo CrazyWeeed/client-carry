@@ -3,8 +3,9 @@ import { useMemo, useState } from "react";
 import { isToday, isTomorrow, isPast, format } from "date-fns";
 import { AppShell } from "@/components/field/AppShell";
 import { ClientRow, EmptyState } from "@/components/field/ClientRow";
-import { pendingQueue, sortByZip, useFieldStore } from "@/lib/store";
+import { attemptCount, callQueue, lastAttemptAt, pendingQueue, sortByZip, useFieldStore } from "@/lib/store";
 import { searchClients } from "@/lib/search";
+import { STATUS_LABEL } from "@/lib/types";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -52,6 +53,7 @@ function Dashboard() {
       ).sort((a, b) => (a.scheduledFor ?? "").localeCompare(b.scheduledFor ?? "")),
     [clients],
   );
+  const toCall = useMemo(() => callQueue(clients), [clients]);
   const results = useMemo(() => (q.trim() ? searchClients(clients, q).slice(0, 8) : []), [clients, q]);
 
   const start = () => {
@@ -132,6 +134,31 @@ function Dashboard() {
                 <p className="glass-soft rounded-2xl px-4 py-3 text-[12px] text-steel">Nenhum retorno agendado para já.</p>
               ) : (
                 upcoming.slice(0, 5).map((c) => <ClientRow key={c.id} client={c} showTime />)
+              )}
+            </div>
+          </section>
+
+          <section className="mt-5">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-[11px] tracking-[0.2em] text-steel uppercase">Para ligar · {toCall.length}</p>
+              <Link to="/clientes" className="text-[10px] text-steel tap">
+                ver todos →
+              </Link>
+            </div>
+            <div className="flex flex-col gap-2">
+              {toCall.length === 0 ? (
+                <p className="glass-soft rounded-2xl px-4 py-3 text-[12px] text-steel">Nenhum cliente para ligar.</p>
+              ) : (
+                toCall.slice(0, 5).map((c) => (
+                  <div key={c.id} className="flex flex-col gap-1">
+                    <ClientRow client={c} />
+                    <p className="px-1 text-[11px] text-steel">
+                      {c.status === "noAnswer"
+                        ? `${attemptCount(c)} tentativa${attemptCount(c) === 1 ? "" : "s"} · última ${format(new Date(lastAttemptAt(c) ?? c.lastModified), "dd/MM")}`
+                        : STATUS_LABEL[c.status]}
+                    </p>
+                  </div>
+                ))
               )}
             </div>
           </section>

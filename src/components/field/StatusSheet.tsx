@@ -16,6 +16,9 @@ const COPY: Record<ActionStatus, { title: string; label: string; placeholder: st
     required: true,
   },
   scheduled: { title: "Agendar Retorno", label: "Observação (opcional)", placeholder: "Ex: Cliente atendeu, agendou para amanhã 10h" },
+  noAnswer: { title: "Não atendeu", label: "Observação (opcional)", placeholder: "Ex: Caixa postal, tentar amanhã à tarde" },
+  wrongPhone: { title: "Telefone errado", label: "Observação (opcional)", placeholder: "Ex: Número pertence a outra pessoa" },
+  notAssigned: { title: "Não atribuído", label: "Observação (opcional)", placeholder: "Ex: Linha cancelada pela operadora" },
 };
 
 const CONFIRM_STYLE: Record<ActionStatus, string> = {
@@ -23,6 +26,9 @@ const CONFIRM_STYLE: Record<ActionStatus, string> = {
   refused: "bg-rose text-ink",
   analysis: "bg-mist text-ink",
   scheduled: "bg-amber text-ink",
+  noAnswer: "bg-mist text-ink",
+  wrongPhone: "bg-amber text-ink",
+  notAssigned: "bg-steel text-ink",
 };
 
 export function StatusSheet({
