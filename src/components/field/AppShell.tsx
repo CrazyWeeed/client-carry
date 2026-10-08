@@ -5,7 +5,7 @@ import { useFieldStore, dedupeClients, AUTO_NOTE } from "@/lib/store";
 import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
 
-export function AppShell({ children, title, hideNav }: { children: ReactNode; title?: string; hideNav?: boolean }) {
+export function AppShell({ children, title, hideNav, back }: { children: ReactNode; title?: string; hideNav?: boolean; back?: boolean }) {
   const { hydrated, setHydrated } = useFieldStore();
   const clients = useFieldStore((s) => s.clients);
   const importedFileName = useFieldStore((s) => s.importedFileName);
@@ -119,6 +119,15 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
     <div className="relative mx-auto min-h-dvh w-full max-w-md overflow-x-hidden">
 
       <header className="relative flex items-center justify-center px-4 pt-4">
+        {back && (
+          <button
+            onClick={() => history.back()}
+            aria-label="Voltar"
+            className="glass-soft absolute left-4 grid size-9 place-items-center rounded-xl text-lg leading-none text-steel tap"
+          >
+            ←
+          </button>
+        )}
         <Link to="/" className="text-center tap">
           <p className="font-display text-[15px] leading-tight font-semibold tracking-[0.28em] uppercase">Field Connect</p>
           <p className="mt-0.5 text-[11px] tracking-[0.12em] text-steel">By L.A. Tech Braga</p>
@@ -153,7 +162,7 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
         </div>
       )}
 
-      <main className="relative px-4 pt-4 pb-28">{children}</main>
+      <main className="relative px-4 pt-3 pb-28">{children}</main>
 
       {!hideNav && <BottomNav />}
 

@@ -80,12 +80,7 @@ function ClientPage() {
   };
 
   return (
-    <AppShell title="Detalhes do Cliente" hideNav>
-      <div className="mb-3">
-        <button onClick={() => history.back()} className="glass-soft grid size-10 place-items-center rounded-xl text-lg tap" aria-label="Voltar">
-          ←
-        </button>
-      </div>
+    <AppShell back hideNav>
 
       <div className="glass rounded-2xl p-4 animate-rise">
         {client.idCliente ? (
