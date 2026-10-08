@@ -32,7 +32,6 @@ interface FieldState {
   setHydrated: () => void;
   mergeClients: (incoming: Client[], fileName: string) => { added: number; updated: number };
   setStatus: (id: string, status: ClientStatus, note: string, scheduledFor?: string | null) => void;
-  releaseDueSchedules: () => number;
   clearAll: () => void;
 }
 
@@ -133,30 +132,6 @@ export const useFieldStore = create<FieldState>()(
               : c,
           ),
         });
-      },
-
-      releaseDueSchedules: () => {
-        const now = new Date();
-        const iso = now.toISOString();
-        let released = 0;
-        const clients = get().clients.map((c) => {
-          if (c.status === "scheduled" && c.scheduledFor && new Date(c.scheduledFor) <= now) {
-            released++;
-            return {
-              ...c,
-              status: "pending" as const,
-              scheduledFor: null,
-              history: [
-                { timestamp: iso, status: "pending" as const, note: "Hora agendada chegou — de volta à fila" },
-                ...c.history,
-              ],
-              lastModified: iso,
-            };
-          }
-          return c;
-        });
-        if (released > 0) set({ clients });
-        return released;
       },
 
       clearAll: () => {

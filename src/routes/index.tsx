@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { isToday, isTomorrow, format } from "date-fns";
+import { isToday, isTomorrow, isPast, format } from "date-fns";
 import { AppShell } from "@/components/field/AppShell";
 import { ClientRow, EmptyState } from "@/components/field/ClientRow";
 import { pendingQueue, sortByZip, useFieldStore } from "@/lib/store";
@@ -39,6 +39,10 @@ function Dashboard() {
   }, [clients]);
 
   const queue = useMemo(() => pendingQueue(clients), [clients]);
+  const overdue = useMemo(
+    () => clients.filter((c) => c.status === "scheduled" && c.scheduledFor && isPast(new Date(c.scheduledFor)) && !isToday(new Date(c.scheduledFor))).length,
+    [clients],
+  );
   const upcoming = useMemo(
     () =>
       sortByZip(
@@ -89,6 +93,13 @@ function Dashboard() {
             <Counter n={counts.refused} label="Recus." tone="text-rose" status="refused" />
             <Counter n={counts.withdrawn} label="Retir." tone="text-mint" status="withdrawn" />
           </div>
+
+          {overdue > 0 && (
+            <Link to="/agendados" className="glass mt-4 flex items-center justify-between rounded-2xl px-4 py-3 tap">
+              <span className="text-[13px] font-semibold text-rose">{overdue} agendamento(s) atrasado(s)</span>
+              <span className="text-[12px] text-rose">reagendar →</span>
+            </Link>
+          )}
 
           <button
             onClick={start}

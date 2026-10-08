@@ -6,7 +6,7 @@ import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
 
 export function AppShell({ children, title, hideNav }: { children: ReactNode; title?: string; hideNav?: boolean }) {
-  const { hydrated, setHydrated, releaseDueSchedules } = useFieldStore();
+  const { hydrated, setHydrated } = useFieldStore();
   const clients = useFieldStore((s) => s.clients);
   const importedFileName = useFieldStore((s) => s.importedFileName);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,8 +37,7 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
     return () => window.removeEventListener("field-storage-error", onErr);
   }, []);
 
-  // Overdue schedules stay "scheduled" and appear under "Atrasados" in /agendados.
-  void releaseDueSchedules;
+  // Overdue schedules stay "scheduled" until rescheduled in /agendados (never back to pending).
 
 
   const onFile = async (file: File) => {

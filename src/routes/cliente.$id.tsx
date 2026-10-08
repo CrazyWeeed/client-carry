@@ -7,6 +7,7 @@ import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
 import { nextOpenAfter, nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
+import { googleCalendarUrl } from "@/lib/calendar";
 import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
@@ -97,6 +98,16 @@ function ClientPage() {
         </div>
         {client.status === "scheduled" && client.scheduledFor && (
           <p className="mt-2 text-[12px] text-amber">Retorno: {format(new Date(client.scheduledFor), "dd/MM/yyyy 'às' HH:mm")}</p>
+        )}
+        {client.status === "scheduled" && googleCalendarUrl(client) && (
+          <a
+            href={googleCalendarUrl(client)!}
+            target="_blank"
+            rel="noreferrer"
+            className="glass-soft mt-2 flex min-h-10 items-center justify-center rounded-xl text-[12px] font-semibold text-sky tap"
+          >
+            Adicionar ao Google Agenda
+          </a>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-2">
