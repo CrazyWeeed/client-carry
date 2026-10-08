@@ -15,63 +15,39 @@ function eventFor(c: Client) {
   };
 }
 
+const utc = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
 export function hasCalendarEvent(c: Client): boolean {
   return eventFor(c) !== null;
 }
 
-const utc = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-// RFC 5545 text escaping
-const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
-
-export function buildIcs(c: Client): string | null {
+/** Google Agenda na web, já preenchido. */
+export function googleCalendarUrl(c: Client): string | null {
   const ev = eventFor(c);
   if (!ev) return null;
-  return [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Field Connect//PT",
-    "CALSCALE:GREGORIAN",
-    "BEGIN:VEVENT",
-    `UID:${c.id}-${utc(ev.start)}@field-connect`,
-    `DTSTAMP:${utc(new Date())}`,
-    `DTSTART:${utc(ev.start)}`,
-    `DTEND:${utc(ev.end)}`,
-    `SUMMARY:${esc(ev.summary)}`,
-    ev.description ? `DESCRIPTION:${esc(ev.description)}` : "",
-    "BEGIN:VALARM",
-    "ACTION:DISPLAY",
-    "DESCRIPTION:Retorno",
-    "TRIGGER:-PT15M",
-    "END:VALARM",
-    "END:VEVENT",
-    "END:VCALENDAR",
-  ]
-    .filter(Boolean)
-    .join("\r\n");
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: ev.summary,
+    dates: `${utc(ev.start)}/${utc(ev.end)}`,
+    details: ev.description,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
 
-/** Gera o .ics e abre o fluxo de adicionar ao calendário do celular (Android e iPhone). */
-export async function addToCalendar(c: Client): Promise<void> {
-  const ics = buildIcs(c);
-  if (!ics) return;
-  const name = `retorno-${(c.idCliente ?? c.id).replace(/[^\w-]/g, "")}.ics`;
-  const file = new File([ics], name, { type: "text/calendar" });
-  // Share sheet on mobile: lets the phone pick the calendar app directly.
-  const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
-  if (nav.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: "Retorno" });
-      return;
-    } catch {
-      // cancelled or unsupported: fall back to download
-    }
+/**
+ * Abre o evento já preenchido no Google Agenda, sem gerar arquivo.
+ * Android: abre o app do Google Agenda direto (intent), com a versão web como fallback.
+ * iPhone e computador: abre a versão web do Google Agenda, já preenchida.
+ */
+export function addToCalendar(c: Client): void {
+  const url = googleCalendarUrl(c);
+  if (!url) return;
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    const path = url.replace(/^https:\/\//, "");
+    const intent = `intent://${path}#Intent;scheme=https;package=com.google.android.calendar;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+    window.location.href = intent;
+    return;
   }
-  const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  window.open(url, "_blank", "noopener");
 }

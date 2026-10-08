@@ -73,7 +73,7 @@ function ClientPage() {
     };
     toast.success(`${client.name}: ${STATUS_LABEL[status]}`, {
       description: next ? `Próximo: ${next.name}` : "Fila de pendentes terminada",
-      action: calReady ? { label: "Adicionar ao calendário", onClick: () => void addToCalendar(calClient) } : undefined,
+      action: calReady ? { label: "Adicionar ao calendário", onClick: () => addToCalendar(calClient) } : undefined,
       duration: 10000,
     });
     if (next) navigate({ to: "/cliente/$id", params: { id: next.id } });
@@ -111,7 +111,7 @@ function ClientPage() {
         )}
         {client.status === "scheduled" && hasCalendarEvent(client) && (
           <button
-            onClick={() => void addToCalendar(client)}
+            onClick={() => addToCalendar(client)}
             className="glass-soft mt-2 flex min-h-10 w-full items-center justify-center rounded-xl text-[12px] font-semibold text-mist tap"
           >
             Adicionar ao calendário

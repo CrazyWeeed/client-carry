@@ -87,7 +87,7 @@ function ScheduledPage() {
                     ) : null}
                     {hasCalendarEvent(c) && (
                       <button
-                        onClick={() => void addToCalendar(c)}
+                        onClick={() => addToCalendar(c)}
                         className="glass-soft flex min-h-10 flex-1 items-center justify-center rounded-xl text-[12px] font-semibold text-mist tap"
                       >
                         Calendário
