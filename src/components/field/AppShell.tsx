@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useFieldStore, dedupeClients, AUTO_NOTE } from "@/lib/store";
 import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
+import { Maximize, Minimize } from "lucide-react";
 
 export function AppShell({ children, title, hideNav, back }: { children: ReactNode; title?: string; hideNav?: boolean; back?: boolean }) {
   const { hydrated, setHydrated } = useFieldStore();
@@ -12,6 +13,8 @@ export function AppShell({ children, title, hideNav, back }: { children: ReactNo
   const [menuOpen, setMenuOpen] = useState(false);
   const [updateWorker, setUpdateWorker] = useState<ServiceWorker | null>(null);
   const applyingUpdate = useRef(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [fsSupported, setFsSupported] = useState(false);
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -51,6 +54,48 @@ export function AppShell({ children, title, hideNav, back }: { children: ReactNo
       .catch(() => {});
     return () => navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
   }, []);
+
+  // Tela cheia: um botão discreto, que vira "sair" enquanto estiver em tela cheia.
+  useEffect(() => {
+    const doc = document as Document & { fullscreenEnabled?: boolean };
+    setFsSupported(!!doc.fullscreenEnabled && !!document.documentElement.requestFullscreen);
+    const onChange = () => setFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    else void document.documentElement.requestFullscreen?.().catch(() => {});
+  };
+
+  // Enquanto estiver em tela cheia, mantém a tela acesa (Wake Lock). Libera ao sair.
+  // O sistema solta o bloqueio quando a aba fica oculta, então ele é pedido de novo ao voltar.
+  useEffect(() => {
+    let lock: { release: () => Promise<void> } | null = null;
+    const nav = navigator as Navigator & { wakeLock?: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } };
+    const acquire = async () => {
+      if (!fullscreen || !nav.wakeLock || document.visibilityState !== "visible") return;
+      try {
+        lock = await nav.wakeLock.request("screen");
+      } catch {
+        lock = null;
+      }
+    };
+    const release = () => {
+      void lock?.release().catch(() => {});
+      lock = null;
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void acquire();
+    };
+    if (fullscreen) void acquire();
+    else release();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      release();
+    };
+  }, [fullscreen]);
 
   useEffect(() => {
     const onErr = () =>
@@ -132,6 +177,15 @@ export function AppShell({ children, title, hideNav, back }: { children: ReactNo
           <p className="font-display text-[15px] leading-tight font-semibold tracking-[0.28em] uppercase">Field Connect</p>
           <p className="mt-0.5 text-[11px] tracking-[0.12em] text-steel">By L.A. Tech Braga</p>
         </Link>
+        {fsSupported && (
+          <button
+            onClick={toggleFullscreen}
+            aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            className="glass-soft absolute right-16 grid size-9 place-items-center rounded-xl text-steel tap"
+          >
+            {fullscreen ? <Minimize className="size-4" /> : <Maximize className="size-4" />}
+          </button>
+        )}
         <button
           onClick={() => setMenuOpen(true)}
           aria-label="Menu"
