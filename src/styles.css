@@ -46,58 +46,58 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --ink: oklch(0.16 0.04 265);
-  --ink2: oklch(0.2 0.045 265);
-  --mist: oklch(0.95 0.015 255);
-  --steel: oklch(0.75 0.045 255);
-  --amber: oklch(0.82 0.17 78);
-  --rose: oklch(0.72 0.17 12);
-  --mint: oklch(0.79 0.15 162);
-  --sky: oklch(0.75 0.14 225);
+  --radius: 0.5rem;
+  --ink: oklch(0.135 0 0);
+  --ink2: oklch(0.175 0 0);
+  --mist: oklch(0.96 0 0);
+  --steel: oklch(0.7 0 0);
+  --amber: oklch(0.8 0.12 85);
+  --rose: oklch(0.68 0.14 25);
+  --mint: oklch(0.75 0.09 155);
+  --sky: oklch(0.9 0 0);
 
   --background: var(--ink);
   --foreground: oklch(1 0 0);
-  --card: oklch(1 0 0 / 8%);
+  --card: oklch(1 0 0 / 4%);
   --card-foreground: oklch(1 0 0);
   --popover: var(--ink2);
   --popover-foreground: oklch(1 0 0);
-  --primary: oklch(0.83 0.13 200);
+  --primary: oklch(0.95 0 0);
   --primary-foreground: var(--ink);
   --secondary: oklch(1 0 0 / 10%);
   --secondary-foreground: var(--mist);
   --muted: oklch(1 0 0 / 6%);
   --muted-foreground: var(--steel);
-  --accent: oklch(0.83 0.13 200);
+  --accent: oklch(0.95 0 0);
   --accent-foreground: var(--ink);
   --destructive: var(--rose);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(1 0 0 / 14%);
-  --input: oklch(1 0 0 / 14%);
-  --ring: oklch(0.83 0.13 200);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 10%);
+  --ring: oklch(0.95 0 0);
 
   --bg-field:
-    radial-gradient(120% 90% at 85% -10%, oklch(0.33 0.07 255) 0%, var(--ink) 55%),
-    linear-gradient(160deg, var(--ink), oklch(0.18 0.04 262));
+    radial-gradient(120% 55% at 50% -12%, oklch(0.24 0 0) 0%, var(--ink) 60%);
   --shadow-accent: none;
 }
 
 @utility glass {
-  background: oklch(1 0 0 / 5%);
-  border: 1px solid oklch(1 0 0 / 10%);
+  background: linear-gradient(180deg, oklch(1 0 0 / 6%), oklch(1 0 0 / 2%));
+  border: 1px solid oklch(1 0 0 / 9%);
+  box-shadow: inset 0 1px 0 oklch(1 0 0 / 6%);
 }
 
 @utility glass-soft {
-  background: oklch(1 0 0 / 4%);
-  border: 1px solid oklch(1 0 0 / 8%);
+  background: linear-gradient(180deg, oklch(1 0 0 / 4%), oklch(1 0 0 / 1.5%));
+  border: 1px solid oklch(1 0 0 / 7%);
 }
 
 @utility diag {
-  clip-path: none;
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 80%);
 }
 
 @utility diag-r {
-  clip-path: none;
+  clip-path: polygon(0 0, 100% 0, 100% 80%, 0 100%);
 }
 
 @utility bg-field {
@@ -153,7 +153,8 @@
   }
 
   html {
-    background: var(--ink);
+    background: var(--bg-field);
+    background-attachment: fixed;
   }
 
   body {
