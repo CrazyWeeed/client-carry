@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/field/AppShell";
 import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
-import { nextOpenAfter, nextPendingAfter, pendingQueue, useFieldStore } from "@/lib/store";
+import { nextOpenAfter, nextPendingAfter, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 import { cleanAddress, fullAddress } from "@/lib/address";
@@ -35,8 +35,6 @@ function ClientPage() {
   const [action, setAction] = useState<ActionStatus | null>(null);
 
   const client = clients.find((c) => c.id === id);
-  const queue = pendingQueue(clients);
-  const position = client ? queue.findIndex((c) => c.id === client.id) : -1;
 
   if (!hydrated) return <AppShell title="Cliente">{null}</AppShell>;
   if (!client) {
@@ -83,13 +81,10 @@ function ClientPage() {
 
   return (
     <AppShell title="Detalhes do Cliente" hideNav>
-      <div className="mb-3 flex items-center justify-between">
+      <div className="mb-3">
         <button onClick={() => history.back()} className="glass-soft grid size-10 place-items-center rounded-xl text-lg tap" aria-label="Voltar">
           ←
         </button>
-        <span className="text-[11px] text-steel">
-          {position >= 0 ? `${position + 1} de ${queue.length} pendentes` : `${queue.length} pendentes na fila`}
-        </span>
       </div>
 
       <div className="glass rounded-2xl p-4 animate-rise">
