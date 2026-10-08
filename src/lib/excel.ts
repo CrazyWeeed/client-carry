@@ -11,7 +11,7 @@ const norm = (s: unknown) =>
     .trim();
 
 const MATCHERS: Record<string, string[]> = {
-  idCliente: ["id_cliente", "id cliente"],
+  idCliente: ["nº cliente", "n cliente", "num cliente", "numero cliente", "id_cliente", "id cliente"],
   contract: ["contrato", "contract", "n contrato", "nº contrato", "num contrato", "numero", "n.", "id"],
   name: ["nome", "name", "cliente", "customer", "titular"],
   phone: ["telefone", "telemovel", "tel", "phone", "contacto", "contato", "movel"],
@@ -341,7 +341,7 @@ const fmt = (iso: string | null | undefined) => (iso ? format(new Date(iso), "dd
 
 /** The only columns the exported file ever contains, in this order. */
 export const OFFICIAL_COLUMNS = [
-  "ID_Cliente", "Contrato", "Nome cliente", "Tipo", "Contacto", "Codigo postal", "Morada", "Painel", "Notas",
+  "Nº Cliente", "Contrato", "Nome cliente", "Tipo", "Contacto", "Codigo postal", "Morada", "Painel", "Notas",
   "Status_Prosegur", "Status_Label", "Status_Data", "Observacao_Ultima", "Agendado_Para", "Historico_Resumido",
   "Historico_JSON",
 ] as const;
@@ -374,7 +374,7 @@ function original(c: Client, base: string): unknown {
 function officialRow(c: Client): Record<string, unknown> {
   const fallback = c.contractNumber === `${c.sheetName}-${c.name}`;
   return {
-    ID_Cliente: c.idCliente ?? original(c, "id_cliente"),
+    "Nº Cliente": c.idCliente ?? original(c, "nº cliente") ?? original(c, "id_cliente"),
     Contrato: fallback ? "" : c.contractNumber,
     "Nome cliente": c.name === "(sem nome)" ? "" : c.name,
     Tipo: c.type === "commercial" ? "Negócio" : "Residencial",

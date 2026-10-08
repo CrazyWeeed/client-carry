@@ -81,7 +81,7 @@ export function StatusSheet({
             </label>
           </div>
           <div className="mt-2 flex gap-1.5">
-            <QuickChip onClick={() => quick(new Date(), new Date().getHours() + 2)}>Hoje +2h</QuickChip>
+            <QuickChip onClick={() => quick(new Date(), Math.min(new Date().getHours() + 2, 23))}>Hoje +2h</QuickChip>
             <QuickChip onClick={() => quick(tomorrow, 10)}>Amanhã 10h</QuickChip>
             <QuickChip onClick={() => quick(tomorrow, 14)}>Amanhã 14h</QuickChip>
           </div>

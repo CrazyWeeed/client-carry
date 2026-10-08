@@ -63,8 +63,20 @@ function ClientPage() {
     setStatus(client.id, status, note, scheduledFor);
     setAction(null);
     const next = nextPendingAfter(useFieldStore.getState().clients, client.id);
+    // Calendar link for the appointment just made, shown in the toast so it is reachable after navigating away.
+    const calUrl =
+      status === "scheduled" && scheduledFor
+        ? googleCalendarUrl({
+            ...client,
+            status,
+            scheduledFor,
+            history: [{ timestamp: new Date().toISOString(), status, note, scheduledFor }, ...client.history],
+          })
+        : null;
     toast.success(`${client.name}: ${STATUS_LABEL[status]}`, {
       description: next ? `Próximo: ${next.name}` : "Fila de pendentes terminada",
+      action: calUrl ? { label: "Google Agenda", onClick: () => window.open(calUrl, "_blank") } : undefined,
+      duration: 10000,
     });
     if (next) navigate({ to: "/cliente/$id", params: { id: next.id } });
     else navigate({ to: "/" });
@@ -84,7 +96,7 @@ function ClientPage() {
       <div className="glass rounded-2xl p-4 animate-rise">
         {client.idCliente ? (
           <p className="mb-1 text-[11px] font-semibold text-steel">
-            ID Cliente <span className="text-accent">{client.idCliente}</span>
+            Nº Cliente <span className="text-accent">{client.idCliente}</span>
           </p>
         ) : null}
         <p className="text-[10px] tracking-[0.2em] text-steel uppercase">Contrato</p>
