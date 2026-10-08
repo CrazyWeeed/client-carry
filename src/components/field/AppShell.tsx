@@ -93,17 +93,14 @@ export function AppShell({ children, title, hideNav }: { children: ReactNode; ti
 
   return (
     <div className="relative mx-auto min-h-dvh w-full max-w-md overflow-x-hidden">
-      <div className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-accent/25 blur-3xl" />
-      <div className="pointer-events-none absolute top-40 -left-20 size-64 rounded-full bg-amber/15 blur-3xl" />
-      <div className="pointer-events-none absolute right-0 bottom-0 size-56 rounded-full bg-rose/10 blur-3xl" />
 
       <header className="relative flex items-center justify-center px-4 pt-4">
-        <div className="glass-soft absolute left-4 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[10px] font-medium text-mist">
+        <div className="glass-soft absolute left-4 flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-[11px] font-medium text-mist">
           <span className="size-1.5 rounded-full bg-mint" /> Offline
         </div>
         <Link to="/" className="text-center tap">
           <p className="font-display text-[17px] leading-tight font-bold tracking-tight">Gestão de clientes</p>
-          <p className="text-[10px] tracking-[0.16em] text-steel">By Luiz Albuquerque</p>
+          <p className="text-[11px] tracking-[0.16em] text-steel">By Luiz Albuquerque</p>
         </Link>
         <button
           onClick={() => setMenuOpen(true)}
@@ -177,19 +174,19 @@ function MenuButton({
 }
 
 function BottomNav() {
-  const item = "rounded-xl py-2.5 text-center text-[11px] font-semibold text-steel tap";
-  const active = { className: `${item} bg-accent text-ink` };
+  const item = "flex min-h-12 flex-col items-center justify-center text-[12px] font-semibold text-steel tap";
+  const active = { className: `${item} text-accent` };
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md px-4 pb-4">
-      <div className="grid grid-cols-4 gap-1.5 rounded-2xl border border-border bg-ink p-1.5">
+    <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-border bg-ink pb-[env(safe-area-inset-bottom)]">
+      <div className="grid grid-cols-4">
         <Link to="/" className={item} activeProps={active} activeOptions={{ exact: true }}>
           Início
         </Link>
         <Link to="/agendados" className={item} activeProps={active}>
-          Agend.
+          Agendados
         </Link>
         <Link to="/clientes" className={item} activeProps={active}>
-          Lista
+          Clientes
         </Link>
         <Link to="/exportar" className={item} activeProps={active}>
           Exportar

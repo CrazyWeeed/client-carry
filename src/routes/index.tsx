@@ -104,7 +104,7 @@ function Dashboard() {
           <button
             onClick={start}
             disabled={queue.length === 0}
-            className="diag-r mt-4 flex w-full items-center justify-between rounded-2xl bg-gradient-to-r from-accent to-sky px-4 py-4 text-ink shadow-accent tap disabled:opacity-40"
+            className="mt-4 flex min-h-14 w-full items-center justify-between rounded-xl bg-accent px-4 text-ink tap disabled:opacity-40"
           >
             <span className="font-display text-[17px] font-bold tracking-tight">Começar Trabalho</span>
             <span className="font-display text-lg font-bold">→</span>
@@ -123,7 +123,7 @@ function Dashboard() {
           <section className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[11px] tracking-[0.2em] text-steel uppercase">Agendados hoje / amanhã</p>
-              <Link to="/agendados" className="text-[10px] text-steel tap">
+              <Link to="/agendados" className="text-[11px] text-steel tap">
                 ver todos →
               </Link>
             </div>
@@ -139,7 +139,7 @@ function Dashboard() {
           <section className="mt-5">
             <div className="mb-2 flex items-center justify-between">
               <p className="text-[11px] tracking-[0.2em] text-steel uppercase">Próximos clientes</p>
-              <span className="text-[10px] text-steel">por Código Postal · {queue.length} pendentes</span>
+              <span className="text-[11px] text-steel">por Código Postal · {queue.length} pendentes</span>
             </div>
             <div className="flex flex-col gap-2">
               {queue.length === 0 ? (
@@ -151,7 +151,7 @@ function Dashboard() {
           </section>
 
           {hydrated && clients.length > 0 && (
-            <p className="mt-5 text-center text-[10px] text-steel">
+            <p className="mt-5 text-center text-[11px] text-steel">
               {clients.length} clientes · atualizado {format(new Date(), "dd/MM HH:mm")}
             </p>
           )}
@@ -165,7 +165,7 @@ function Counter({ n, label, tone, status }: { n: number; label: string; tone: s
   return (
     <Link to="/clientes" search={{ status }} className="glass diag block rounded-xl px-2 py-2.5 text-center tap">
       <p className={`font-display text-xl leading-none font-bold ${tone}`}>{n}</p>
-      <p className="mt-1 text-[9px] tracking-wide text-steel uppercase">{label}</p>
+      <p className="mt-1 text-[11px] tracking-wide text-steel uppercase">{label}</p>
     </Link>
   );
 }

@@ -70,7 +70,7 @@ function ScheduledPage() {
           <section key={label} className="mb-5">
             <div className="mb-2 flex items-center justify-between">
               <p className={`text-[11px] tracking-[0.2em] uppercase ${label === OVERDUE ? "text-rose" : "text-steel"}`}>{label}</p>
-              <span className="text-[10px] text-steel">{list.length}</span>
+              <span className="text-[11px] text-steel">{list.length}</span>
             </div>
             <div className="flex flex-col gap-2">
               {list.map((c) => (
@@ -110,7 +110,7 @@ function ScheduledPage() {
         onConfirm={confirm}
       />
       {target && (
-        <p className="mt-2 text-center text-[10px] text-steel">
+        <p className="mt-2 text-center text-[11px] text-steel">
           Estado anterior: {STATUS_LABEL[target.status]} · a observação anterior fica no histórico
         </p>
       )}

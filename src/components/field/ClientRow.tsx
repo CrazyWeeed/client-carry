@@ -6,7 +6,7 @@ import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 export function StatusChip({ status }: { status: Client["status"] }) {
   const s = STATUS_STYLE[status];
   return (
-    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-wide uppercase ${s.chip}`}>
+    <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase ${s.chip}`}>
       {STATUS_LABEL[status]}
     </span>
   );

@@ -88,7 +88,7 @@ function ClientPage() {
         <button onClick={() => history.back()} className="glass-soft grid size-10 place-items-center rounded-xl text-lg tap" aria-label="Voltar">
           ←
         </button>
-        <span className="text-[10px] text-steel">
+        <span className="text-[11px] text-steel">
           {position >= 0 ? `${position + 1} de ${queue.length} pendentes` : `${queue.length} pendentes na fila`}
         </span>
       </div>
@@ -99,7 +99,7 @@ function ClientPage() {
             Nº Cliente <span className="text-accent">{client.idCliente}</span>
           </p>
         ) : null}
-        <p className="text-[10px] tracking-[0.2em] text-steel uppercase">Contrato</p>
+        <p className="text-[11px] tracking-[0.2em] text-steel uppercase">Contrato</p>
         <p className="font-display text-2xl font-bold tracking-tight text-accent">#{client.contractNumber}</p>
         <div className="mt-2 flex items-start justify-between gap-3">
           <div>
@@ -124,11 +124,11 @@ function ClientPage() {
 
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="glass-soft rounded-xl px-3 py-2.5">
-            <p className="text-[10px] tracking-wide text-steel uppercase">Telefone</p>
+            <p className="text-[11px] tracking-wide text-steel uppercase">Telefone</p>
             <p className="mt-0.5 text-[13px] font-medium">{client.phone || "—"}</p>
           </div>
           <div className="glass-soft rounded-xl px-3 py-2.5">
-            <p className="text-[10px] tracking-wide text-steel uppercase">Código Postal</p>
+            <p className="text-[11px] tracking-wide text-steel uppercase">Código Postal</p>
             <p className="mt-0.5 text-[13px] font-medium">{client.zipCode || "—"}</p>
           </div>
         </div>
@@ -166,7 +166,7 @@ function ClientPage() {
                   {h.scheduledFor ? ` para ${format(new Date(h.scheduledFor), "dd/MM HH:mm")}` : ""}
                   {h.note ? <span className="text-mist/80"> — {h.note}</span> : null}
                 </p>
-                <p className="text-[10px] text-steel">{format(new Date(h.timestamp), "dd/MM/yyyy HH:mm")}</p>
+                <p className="text-[11px] text-steel">{format(new Date(h.timestamp), "dd/MM/yyyy HH:mm")}</p>
               </div>
             </div>
           ))}
@@ -200,7 +200,7 @@ function ClientPage() {
 
 function ActionBtn({ onClick, className, icon: Icon, label }: { onClick: () => void; className: string; icon: LucideIcon; label: string }) {
   return (
-    <button onClick={onClick} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-semibold tap ${className}`}>
+    <button onClick={onClick} className={`flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[11px] font-semibold tap ${className}`}>
       <Icon className="size-5" />
       {label}
     </button>

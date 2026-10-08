@@ -72,11 +72,11 @@ export function StatusSheet({
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-2">
             <label className="glass-soft flex flex-col rounded-xl px-3 py-2.5">
-              <span className="text-[10px] tracking-wide text-steel uppercase">Data</span>
+              <span className="text-[11px] tracking-wide text-steel uppercase">Data</span>
               <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="bg-transparent text-[15px] font-medium outline-none" />
             </label>
             <label className="glass-soft flex flex-col rounded-xl px-3 py-2.5">
-              <span className="text-[10px] tracking-wide text-steel uppercase">Hora</span>
+              <span className="text-[11px] tracking-wide text-steel uppercase">Hora</span>
               <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="bg-transparent text-[15px] font-medium outline-none" />
             </label>
           </div>
