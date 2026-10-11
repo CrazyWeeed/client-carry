@@ -76,36 +76,36 @@ function soma(s: Stat, c: Client): void {
 // "Feito" = retirado ou recusado. Agendado e em análise ainda não contam como feito.
 
 const COR = {
-  retirado: "oklch(0.75 0.09 155)",  // verde, igual ao status Retirado
-  recusado: "oklch(0.68 0.14 25)",   // vermelho, igual ao status Recusado
-  pendente: "oklch(0.8 0.12 85)",    // amarelo, igual ao status Pendente
-  outros: "oklch(0.55 0 0)",         // cinza: agendado, em análise e contatos
+  feito: "oklch(0.78 0.19 150)",     // verde vivo: retirado ou recusado (nada a fazer)
+  falta: "oklch(0.86 0.17 88)",      // amarelo: ainda falta fazer
+  nada: "oklch(0.66 0.16 25)",       // vermelho: nenhum feito
   vazio: "oklch(0.3 0 0)",           // sem clientes
 };
 
 const gid = (k: string) => "g-" + k.replace(/[^a-z0-9]+/g, "-");
 
-/** Faixas proporcionais (esquerda -> direita): retirado, recusado, outros, pendente. */
+/** Faixa proporcional: verde (feito) à esquerda, amarelo (falta fazer) à direita. */
 function Gradiente({ id, s }: { id: string; s: Stat }) {
-  const t = s.total;
-  const a = s.retirados / t;
-  const b = a + s.recusados / t;
-  const c = b + s.outros / t;
+  const feito = (s.retirados + s.recusados) / s.total;
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
   return (
     <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stopColor={COR.retirado} />
-      <stop offset={pct(a)} stopColor={COR.retirado} />
-      <stop offset={pct(a)} stopColor={COR.recusado} />
-      <stop offset={pct(b)} stopColor={COR.recusado} />
-      <stop offset={pct(b)} stopColor={COR.outros} />
-      <stop offset={pct(c)} stopColor={COR.outros} />
-      <stop offset={pct(c)} stopColor={COR.pendente} />
-      <stop offset="1" stopColor={COR.pendente} />
+      <stop offset="0" stopColor={COR.feito} />
+      <stop offset={pct(feito)} stopColor={COR.feito} />
+      <stop offset={pct(feito)} stopColor={COR.falta} />
+      <stop offset="1" stopColor={COR.falta} />
     </linearGradient>
   );
 }
 
+/** Cor do concelho: vermelho se nada foi feito; verde se tudo; senão a faixa. */
+function preenchimento(s: Stat, id: string): string {
+  if (s.total === 0) return COR.vazio;
+  const feitos = s.retirados + s.recusados;
+  if (feitos === 0) return COR.nada;
+  if (feitos === s.total) return COR.feito;
+  return `url(#${id})`;
+}
 /** viewBox para ampliar só um concelho (mesmas coordenadas do desenho geral). */
 function zoomBox(c: Concelho): string {
   const xs = c.poly.flatMap((p) => p.flatMap((r) => r.map((pt) => pt[0] ?? 0)));
@@ -187,18 +187,17 @@ function MapPage() {
             <path
               d={PATHS.get(selected!)}
               fillRule="evenodd"
-              fill={selStat.total === 0 ? COR.vazio : `url(#${gid(selected!)})`}
+              fill={preenchimento(selStat, gid(selected!))}
               stroke="oklch(0.13 0 0)"
               strokeWidth={60}
             />
           </svg>
         </div>
 
-        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <Num label="Feitos" value={selStat.retirados + selStat.recusados} />
           <Num label="Pendentes" value={selStat.pendentes} />
-          <Num label="Retirados" value={selStat.retirados} />
-          <Num label="Recusados" value={selStat.recusados} />
-          <Num label="Outros" value={selStat.outros} />
+          <Num label="Em andamento" value={selStat.outros} />
         </div>
 
         <div className="mt-4 flex flex-wrap gap-1.5">
@@ -234,10 +233,9 @@ function MapPage() {
   return (
     <AppShell title="Mapa">
       <div className="mt-1 flex items-center gap-3 text-[11px] text-steel">
-        <Legenda cor={COR.retirado} texto="Retirado" />
-        <Legenda cor={COR.recusado} texto="Recusado" />
-        <Legenda cor={COR.pendente} texto="Pendente" />
-        <Legenda cor={COR.outros} texto="Outros" />
+        <Legenda cor={COR.feito} texto="Feito" />
+        <Legenda cor={COR.falta} texto="Falta fazer" />
+        <Legenda cor={COR.nada} texto="Nada feito" />
       </div>
 
       <div className="mt-3 rounded-xl border border-border bg-card p-2">
@@ -262,7 +260,7 @@ function MapPage() {
                 key={c.dico}
                 d={PATHS.get(k)}
                 fillRule="evenodd"
-                fill={s.total === 0 ? COR.vazio : `url(#${gid(k)})`}
+                fill={preenchimento(s, gid(k))}
                 stroke="oklch(0.13 0 0)"
                 strokeWidth={300}
                 onClick={() => { setSelected(k); setFiltro("todos"); }}
