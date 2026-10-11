@@ -69,9 +69,8 @@ function ClientPage() {
 
   const confirm = (status: ActionStatus, note: string, scheduledFor: string | null) => {
     // Próximo: dentro da busca (se veio dela); senão, o próximo pendente da fila geral.
-    const before = termo
-      ? sortByZip(searchClients(useFieldStore.getState().clients, termo).filter((c) => c.status === "pending"))
-      : null;
+    // Lista da busca, na ordem do código postal: só pendentes e em análise.
+    const before = termo ? buscaAberta(useFieldStore.getState().clients, termo) : null;
     const next = before ? nextInList(before, client.id) : nextPendingAfter(useFieldStore.getState().clients, client.id);
     setStatus(client.id, status, note, scheduledFor);
     setAction(null);
@@ -186,7 +185,7 @@ function ClientPage() {
         <button
           onClick={() => {
             if (termo) {
-              const list = sortByZip(searchClients(clients, termo).filter((c) => c.status === "pending" || c.status === "scheduled"));
+              const list = buscaAberta(clients, termo);
               const next = nextInList(list, client.id);
               if (next) navigate({ to: "/cliente/$id", params: { id: next.id }, search: { q: termo } });
               else toast(`Fim da lista de "${termo}"`, { id: "fim-lista", duration: Infinity });
@@ -225,6 +224,11 @@ function ActionBtn({ onClick, className, icon: Icon, label }: { onClick: () => v
       {label}
     </button>
   );
+}
+
+/** Clientes da busca que ainda precisam de ação: pendentes e em análise, por código postal. */
+function buscaAberta(clients: Client[], termo: string): Client[] {
+  return sortByZip(searchClients(clients, termo).filter((c) => c.status === "pending" || c.status === "analysis"));
 }
 
 /** Próximo item da lista depois do cliente atual (sem voltar ao início). */
