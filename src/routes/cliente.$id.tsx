@@ -9,6 +9,8 @@ import { nextOpenAfter, nextPendingAfter, useFieldStore } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 import { cleanAddress, fullAddress } from "@/lib/address";
+import { MessageCircle } from "lucide-react";
+import { whatsappUrl } from "@/lib/message";
 import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, PhoneMissed, PhoneOff, Ban, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
@@ -121,7 +123,7 @@ function ClientPage() {
         </div>
         <p className="mt-2 text-[13px] text-mist/85">{cleanAddress(client.address) || "Sem morada"}</p>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-3 gap-2">
           <a
             href={phoneDigits ? `tel:${phoneDigits}` : undefined}
             aria-disabled={!phoneDigits}
@@ -135,7 +137,16 @@ function ClientPage() {
             rel="noreferrer"
             className="diag-r glass-soft grid min-h-12 place-items-center rounded-xl font-display text-[14px] font-bold text-mist tap"
           >
-            <span className="flex items-center gap-2"><MapPin className="size-4" /> Ver no Maps</span>
+            <span className="flex items-center gap-2"><MapPin className="size-4" /> Maps</span>
+          </a>
+          <a
+            href={whatsappUrl(client.phone) ?? undefined}
+            target="_blank"
+            rel="noreferrer"
+            aria-disabled={!whatsappUrl(client.phone)}
+            className="glass-soft grid min-h-12 place-items-center rounded-xl font-display text-[14px] font-bold text-mist tap aria-disabled:opacity-40"
+          >
+            <span className="flex items-center gap-2"><MessageCircle className="size-4" /> Mensagem</span>
           </a>
         </div>
       </div>
