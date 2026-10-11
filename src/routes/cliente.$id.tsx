@@ -84,6 +84,7 @@ function ClientPage() {
       history: [{ timestamp: new Date().toISOString(), status, note, scheduledFor }, ...client.history],
     };
     toast.success(`${client.name}: ${STATUS_LABEL[status]}`, {
+      id: "status-cliente",
       description: next ? `Próximo: ${next.name}` : "Fila de pendentes terminada",
       action: calReady ? { label: "Adicionar ao calendário", onClick: () => addToCalendar(calClient) } : undefined,
       duration: 10000,
@@ -188,7 +189,7 @@ function ClientPage() {
               const list = sortByZip(searchClients(clients, termo).filter((c) => c.status === "pending" || c.status === "scheduled"));
               const next = nextInList(list, client.id);
               if (next) navigate({ to: "/cliente/$id", params: { id: next.id }, search: { q: termo } });
-              else toast(`Fim da lista de "${termo}"`);
+              else toast(`Fim da lista de "${termo}"`, { id: "fim-lista", duration: Infinity });
               return;
             }
             const next = nextOpenAfter(clients, client);
