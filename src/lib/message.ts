@@ -1,6 +1,38 @@
-/** Mensagem pré-programada para quem não atendeu. Texto editável aqui. */
-export const NO_ANSWER_MESSAGE =
-  "Boa tarde, sou o técnico responsável pela recolha do equipamento. Tentei contactá-lo sem sucesso. Pode indicar um melhor horário para agendarmos a retirada? Obrigado.";
+import type { Client } from "./types";
+import { cleanAddress } from "./address";
+
+const PARTICLES = new Set(["de", "do", "da", "dos", "das", "e"]);
+
+/** "SARAH LIMA GALVÃO DE SOUZA" -> "Sarah Lima Galvão de Souza" */
+function titleName(name: string): string {
+  return name
+    .toLocaleLowerCase("pt-PT")
+    .split(/\s+/)
+    .map((w, i) => (i > 0 && PARTICLES.has(w) ? w : w.charAt(0).toLocaleUpperCase("pt-PT") + w.slice(1)))
+    .join(" ");
+}
+
+/** Contrato real (não o sintético "folha-nome" usado quando a planilha não tem número). */
+function realContract(c: Client): string | null {
+  if (!c.contractNumber || c.contractNumber === `${c.sheetName}-${c.name}`) return null;
+  return c.contractNumber;
+}
+
+/** Mensagem pré-programada para quem não atendeu: quem sou, contrato e morada do cadastro. */
+export function noAnswerMessage(c: Client): string {
+  const nome = titleName(c.name);
+  const contrato = realContract(c);
+  const morada = titleName(cleanAddress(c.address));
+  const ref = contrato ? `contrato n.º ${contrato}` : "seu contrato";
+  const local = morada ? `, na morada ${morada}` : "";
+  return (
+    `Olá Sr./Sra. ${nome}, sou prestador de serviços contratado pela PROSEGUR ` +
+    `para a retirada do equipamento de alarme. ` +
+    `Entro em contacto a respeito do ${ref}${local}. ` +
+    `Tentei contactá-lo sem sucesso. Poderá indicar um melhor horário para agendarmos a retirada? ` +
+    `Agradeço desde já a sua atenção.`
+  );
+}
 
 /** Número em formato internacional sem "+" (Portugal: 351 + 9 dígitos). */
 export function waNumber(phone: string): string | null {
@@ -12,8 +44,42 @@ export function waNumber(phone: string): string | null {
 }
 
 /** Abre o WhatsApp com a mensagem já escrita. */
-export function whatsappUrl(phone: string, text = NO_ANSWER_MESSAGE): string | null {
-  const n = waNumber(phone);
+export function whatsappUrl(c: Client): string | null {
+  const n = waNumber(c.phone);
   if (!n) return null;
-  return `https://wa.me/${n}?text=${encodeURIComponent(text)}`;
+  return `https://wa.me/${n}?text=${encodeURIComponent(noAnswerMessage(c))}`;
+}
+
+/** Remove acentos e caracteres fora do GSM-7, pra o SMS sair em 1 mensagem (160 caracteres). */
+function gsm7(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/º/g, ".")
+    .replace(/ª/g, ".")
+    .replace(/[^\x20-\x7E\n]/g, "");
+}
+
+/** SMS curto: cabe em 1 mensagem (160 caracteres, sem acentos). */
+export function smsMessage(c: Client): string {
+  const nome = titleName(c.name);
+  const contrato = realContract(c);
+  const ref = contrato ? `Contrato n. ${contrato}. ` : "";
+  let text = gsm7(
+    `Ola Sr./Sra. ${nome}, sou prestador de servicos da PROSEGUR (retirada de alarme). ` +
+      `${ref}Pode indicar um horario? Obrigado.`,
+  );
+  if (text.length > 160) {
+    // nome muito longo: usa só o primeiro nome
+    const first = nome.split(" ")[0];
+    text = gsm7(`Ola Sr./Sra. ${first}, sou prestador de servicos da PROSEGUR. ${ref}Pode indicar um horario? Obrigado.`);
+  }
+  return text.slice(0, 160);
+}
+
+/** Abre o app de SMS com o texto curto já escrito. */
+export function smsUrl(c: Client): string | null {
+  const n = waNumber(c.phone);
+  if (!n) return null;
+  return `sms:+${n}?body=${encodeURIComponent(smsMessage(c))}`;
 }
