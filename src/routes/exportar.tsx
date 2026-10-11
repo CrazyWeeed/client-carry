@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { AppShell } from "@/components/field/AppShell";
-import { useFieldStore } from "@/lib/store";
+import { contactAttempts, lastContactAt, useFieldStore } from "@/lib/store";
 import { exportWorkbook } from "@/lib/excel";
 import { STATUS_LABEL, STATUS_STYLE, type ClientStatus } from "@/lib/types";
 
@@ -38,6 +38,14 @@ function ExportPage() {
   const importedFileName = useFieldStore((s) => s.importedFileName);
   const [busy, setBusy] = useState(false);
 
+  const attempts = useMemo(
+    () =>
+      clients
+        .map((c) => ({ c, n: contactAttempts(c), last: lastContactAt(c) }))
+        .filter((x) => x.n > 0)
+        .sort((a, b) => b.n - a.n || (b.last ?? "").localeCompare(a.last ?? "")),
+    [clients],
+  );
   const counts = ORDER.map((s) => [s, clients.filter((c) => c.status === s).length] as const);
   const done = clients.filter((c) => c.status !== "pending").length;
   const pct = clients.length ? Math.round((done / clients.length) * 100) : 0;
@@ -108,6 +116,33 @@ function ExportPage() {
           Última importação: {format(new Date(importedAt), "dd/MM HH:mm")}
         </p>
       )}
+
+      <section className="mt-8">
+        <p className="mb-1 text-[12px] tracking-wide text-steel uppercase">Tentativas de contato</p>
+        <p className="text-[13px] text-steel">
+          Quantas vezes você já ligou para cada cliente sem sucesso (não atendeu, telefone errado ou não atribuído).
+        </p>
+        {attempts.length === 0 ? (
+          <p className="mt-3 text-[13px] text-steel">Nenhuma tentativa registrada ainda.</p>
+        ) : (
+          <ul className="mt-3 divide-y divide-border border-y border-border">
+            {attempts.map(({ c, n, last }) => (
+              <li key={c.id} className="flex items-center justify-between gap-3 py-3">
+                <span className="min-w-0">
+                  <span className="block truncate text-[14px]">
+                    {c.idCliente ? `${c.idCliente} — ` : ""}
+                    {c.name}
+                  </span>
+                  <span className="text-[12px] text-steel">
+                    última: {last ? format(new Date(last), "dd/MM HH:mm") : "—"}
+                  </span>
+                </span>
+                <span className="shrink-0 font-display text-[16px] font-semibold tabular-nums">{n}×</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <button
         onClick={run}

@@ -282,3 +282,14 @@ export function callQueue(clients: Client[]): Client[] {
     });
 }
 
+
+/** Tentativas de contato sem sucesso: não atendeu, telefone errado e não atribuído. */
+export function contactAttempts(c: Client): number {
+  return c.history.filter((h) => h.status === "noAnswer" || h.status === "wrongPhone" || h.status === "notAssigned").length;
+}
+
+/** Data (ISO) da última tentativa de contato, ou null. */
+export function lastContactAt(c: Client): string | null {
+  const h = c.history.find((x) => x.status === "noAnswer" || x.status === "wrongPhone" || x.status === "notAssigned");
+  return h ? h.timestamp : null;
+}
