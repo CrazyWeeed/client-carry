@@ -1,5 +1,5 @@
 // Offline cache for the app shell and assets. Data itself lives in localStorage and is never touched here.
-const CACHE = "field-connect-v1";
+const CACHE = "field-connect-v2";
 
 self.addEventListener("install", () => {
   // Do NOT skip waiting automatically: the new version only takes over when the user taps "Atualizar".

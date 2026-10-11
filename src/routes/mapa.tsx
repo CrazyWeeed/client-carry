@@ -201,7 +201,7 @@ function MapPage() {
           <Num label="Outros" value={selStat.outros} />
         </div>
 
-        <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+        <div className="mt-4 flex flex-wrap gap-1.5">
           {FILTROS.map((f) => {
             const active = filtro === f.value;
             return (
