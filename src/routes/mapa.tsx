@@ -36,6 +36,12 @@ const BOUNDS = (() => {
   return { minX, minY, maxX, maxY };
 })();
 
+// Corte à direita: nada além de Valpaços (só o sentido horizontal; a altura não muda).
+const VALPACOS_MAX_X = Math.max(
+  ...CONCELHOS.filter((c) => fold(c.nome) === "valpacos").flatMap((c) => c.poly.flatMap((p) => p.flatMap((r) => r.map((pt) => pt[0] ?? 0)))),
+);
+const CUT_W = VALPACOS_MAX_X + 6000 - BOUNDS.minX;
+
 const PATHS = new Map(
   CONCELHOS.map((c) => [
     fold(c.nome),
@@ -122,8 +128,8 @@ function MapPage() {
 
       <div className="mt-3 rounded-xl border border-border bg-card p-2">
         <svg
-          viewBox={`0 0 ${(BOUNDS.maxX - BOUNDS.minX).toFixed(0)} ${(BOUNDS.maxY - BOUNDS.minY).toFixed(0)}`}
-          className="h-auto w-full"
+          viewBox={`0 0 ${CUT_W.toFixed(0)} ${(BOUNDS.maxY - BOUNDS.minY).toFixed(0)}`}
+          className="h-auto w-full overflow-hidden"
           role="img"
           aria-label="Mapa dos concelhos do norte"
         >
