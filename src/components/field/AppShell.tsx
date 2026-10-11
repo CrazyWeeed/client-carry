@@ -272,7 +272,7 @@ function BottomNav() {
   const active = { className: `${item} text-accent` };
   return (
     <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto w-full max-w-md border-t border-border bg-ink pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-4">
+      <div className="grid grid-cols-5">
         <Link to="/" className={item} activeProps={active} activeOptions={{ exact: true }}>
           Início
         </Link>
@@ -281,6 +281,9 @@ function BottomNav() {
         </Link>
         <Link to="/clientes" className={item} activeProps={active}>
           Clientes
+        </Link>
+        <Link to="/mapa" className={item} activeProps={active}>
+          Mapa
         </Link>
         <Link to="/exportar" className={item} activeProps={active}>
           Exportar
