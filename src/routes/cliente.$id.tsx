@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/field/AppShell";
 import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
+import { Sheet } from "@/components/field/Sheet";
 import type { Client } from "@/lib/types";
 import { nextOpenAfter, nextPendingAfter, sortByZip, useFieldStore } from "@/lib/store";
 import { searchClients } from "@/lib/search";
-import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
+import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL, type ClientStatus } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 import { cleanAddress, fullAddress } from "@/lib/address";
 import { Send } from "lucide-react";
@@ -42,6 +43,10 @@ function ClientPage() {
   const setStatus = useFieldStore((s) => s.setStatus);
   const navigate = useNavigate();
   const [action, setAction] = useState<ActionStatus | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editChoice, setEditChoice] = useState<"pending" | null>(null);
+  const [pendNote, setPendNote] = useState("");
 
   const client = clients.find((c) => c.id === id);
 
@@ -68,6 +73,13 @@ function ClientPage() {
   const mapsQuery = encodeURIComponent(fullAddress(client));
 
   const confirm = (status: ActionStatus, note: string, scheduledFor: string | null) => {
+    if (editMode) {
+      setStatus(client.id, status, note, scheduledFor);
+      setAction(null);
+      setEditMode(false);
+      toast.success(`${client.name}: ${STATUS_LABEL[status]} (editado)`, { id: "status-cliente" });
+      return;
+    }
     // Próximo: dentro da busca (se veio dela); senão, o próximo pendente da fila geral.
     // Lista da busca, na ordem do código postal: só pendentes e em análise.
     const before = termo ? buscaAberta(useFieldStore.getState().clients, termo) : null;
@@ -108,7 +120,15 @@ function ClientPage() {
             <p className="font-display text-[18px] font-semibold tracking-tight">{client.name}</p>
             <p className="mt-0.5 text-[12px] text-steel">{TYPE_LABEL[client.type]}</p>
           </div>
-          <StatusChip status={client.status} />
+          <div className="flex shrink-0 items-center gap-2">
+            <StatusChip status={client.status} />
+            <button
+              onClick={() => { setEditChoice(null); setPendNote(""); setEditOpen(true); }}
+              className="glass-soft rounded-lg px-2.5 py-1 text-[12px] font-semibold text-steel tap"
+            >
+              Editar
+            </button>
+          </div>
         </div>
         {client.status === "scheduled" && client.scheduledFor && (
           <p className="mt-2 text-[12px] text-amber">Retorno: {format(new Date(client.scheduledFor), "dd/MM/yyyy 'às' HH:mm")}</p>
@@ -212,10 +232,71 @@ function ClientPage() {
         </div>
       </div>
 
-      <StatusSheet key={action ?? "none"} status={action} onClose={() => setAction(null)} onConfirm={confirm} />
+      <StatusSheet
+        key={action ?? "none"}
+        status={action}
+        onClose={() => { setAction(null); setEditMode(false); }}
+        onConfirm={confirm}
+      />
+
+      <Sheet open={editOpen} onClose={() => setEditOpen(false)} title="Editar status">
+        <p className="text-[12px] text-steel">Escolha o novo status. Para pendente, a observação fica aqui mesmo.</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {EDIT_OPTIONS.map((o) => {
+            const active = client.status === o.value;
+            return (
+              <button
+                key={o.value}
+                onClick={() => {
+                  if (o.value === "pending") { setEditChoice("pending"); return; }
+                  setEditOpen(false);
+                  setEditMode(true);
+                  setAction(o.value as ActionStatus);
+                }}
+                className={`min-h-11 rounded-xl px-3 text-[13px] font-semibold tap ${active ? "bg-accent text-ink" : "glass-soft text-mist"}`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+        {editChoice === "pending" && (
+          <div className="mt-4 flex flex-col gap-2">
+            <textarea
+              value={pendNote}
+              onChange={(e) => setPendNote(e.target.value)}
+              rows={3}
+              placeholder="Observação (opcional)"
+              className="glass-soft rounded-xl p-3 text-[14px] text-mist outline-none"
+            />
+            <button
+              onClick={() => {
+                setStatus(client.id, "pending", pendNote.trim(), null);
+                setEditOpen(false);
+                setEditChoice(null);
+                toast.success(`${client.name}: Pendente (editado)`, { id: "status-cliente" });
+              }}
+              className="min-h-11 rounded-xl bg-accent font-display text-[14px] font-bold text-ink tap"
+            >
+              Salvar como pendente
+            </button>
+          </div>
+        )}
+      </Sheet>
     </AppShell>
   );
 }
+
+const EDIT_OPTIONS: { value: ClientStatus; label: string }[] = [
+  { value: "pending", label: "Pendente" },
+  { value: "noAnswer", label: "Não atendeu" },
+  { value: "wrongPhone", label: "Tel. errado" },
+  { value: "notAssigned", label: "Não atribuído" },
+  { value: "scheduled", label: "Agendado" },
+  { value: "analysis", label: "Em análise" },
+  { value: "refused", label: "Recusado" },
+  { value: "withdrawn", label: "Retirado" },
+];
 
 function ActionBtn({ onClick, className, icon: Icon, label }: { onClick: () => void; className: string; icon: LucideIcon; label: string }) {
   return (
