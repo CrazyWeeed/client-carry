@@ -62,32 +62,45 @@ const PATHS = new Map(
   ]),
 );
 
-type Stat = { total: number; pendentes: number; feitos: number; andamento: number };
+type Stat = { total: number; pendentes: number; retirados: number; recusados: number; outros: number };
+const ZERO: Stat = { total: 0, pendentes: 0, retirados: 0, recusados: 0, outros: 0 };
+
+function soma(s: Stat, c: Client): void {
+  s.total++;
+  if (c.status === "pending") s.pendentes++;
+  else if (c.status === "withdrawn") s.retirados++;
+  else if (c.status === "refused") s.recusados++;
+  else s.outros++;
+}
 
 // "Feito" = retirado ou recusado. Agendado e em análise ainda não contam como feito.
-const isFeito = (c: Client) => c.status === "withdrawn" || c.status === "refused";
 
 const COR = {
-  feito: "oklch(0.72 0.1 155)",      // verde: retirado ou recusado
-  andamento: "oklch(0.8 0.12 85)",   // amarelo: agendado ou em análise
-  pendente: "oklch(0.66 0.14 25)",   // vermelho: pendente
-  vazio: "oklch(0.3 0 0)",           // cinza: sem clientes
+  retirado: "oklch(0.75 0.09 155)",  // verde, igual ao status Retirado
+  recusado: "oklch(0.68 0.14 25)",   // vermelho, igual ao status Recusado
+  pendente: "oklch(0.8 0.12 85)",    // amarelo, igual ao status Pendente
+  outros: "oklch(0.55 0 0)",         // cinza: agendado, em análise e contatos
+  vazio: "oklch(0.3 0 0)",           // sem clientes
 };
 
 const gid = (k: string) => "g-" + k.replace(/[^a-z0-9]+/g, "-");
 
-/** Faixas proporcionais (esquerda -> direita): feito, em andamento, pendente. */
+/** Faixas proporcionais (esquerda -> direita): retirado, recusado, outros, pendente. */
 function Gradiente({ id, s }: { id: string; s: Stat }) {
-  const f = s.feitos / s.total;
-  const a = s.andamento / s.total;
+  const t = s.total;
+  const a = s.retirados / t;
+  const b = a + s.recusados / t;
+  const c = b + s.outros / t;
   const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
   return (
     <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stopColor={COR.feito} />
-      <stop offset={pct(f)} stopColor={COR.feito} />
-      <stop offset={pct(f)} stopColor={COR.andamento} />
-      <stop offset={pct(f + a)} stopColor={COR.andamento} />
-      <stop offset={pct(f + a)} stopColor={COR.pendente} />
+      <stop offset="0" stopColor={COR.retirado} />
+      <stop offset={pct(a)} stopColor={COR.retirado} />
+      <stop offset={pct(a)} stopColor={COR.recusado} />
+      <stop offset={pct(b)} stopColor={COR.recusado} />
+      <stop offset={pct(b)} stopColor={COR.outros} />
+      <stop offset={pct(c)} stopColor={COR.outros} />
+      <stop offset={pct(c)} stopColor={COR.pendente} />
       <stop offset="1" stopColor={COR.pendente} />
     </linearGradient>
   );
@@ -131,18 +144,15 @@ function MapPage() {
       if (!nome) { sem++; continue; }
       if (!north.has(fold(nome))) { fora++; continue; }
       const k = fold(nome);
-      const s = por.get(k) ?? { total: 0, pendentes: 0, feitos: 0, andamento: 0 };
-      s.total++;
-      if (c.status === "pending") s.pendentes++;
-      else if (isFeito(c)) s.feitos++;
-      else s.andamento++;
+      const s = por.get(k) ?? { ...ZERO };
+      soma(s, c);
       por.set(k, s);
     }
     return { porConcelho: por, foraRegiao: fora, semConcelho: sem };
   }, [clients]);
 
   const sel = selected ? CONCELHOS.find((c) => fold(c.nome) === selected) : null;
-  const selStat: Stat = (selected && porConcelho.get(selected)) || { total: 0, pendentes: 0, feitos: 0, andamento: 0 };
+  const selStat: Stat = (selected && porConcelho.get(selected)) || { ...ZERO };
 
   const regionClients = useMemo(
     () => (selected ? sortByZip(clients.filter((c) => fold(concelhoOf(c) ?? "") === selected)) : []),
@@ -184,10 +194,11 @@ function MapPage() {
           </svg>
         </div>
 
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
           <Num label="Pendentes" value={selStat.pendentes} />
-          <Num label="Feitos" value={selStat.feitos} />
-          <Num label="Em andamento" value={selStat.andamento} />
+          <Num label="Retirados" value={selStat.retirados} />
+          <Num label="Recusados" value={selStat.recusados} />
+          <Num label="Outros" value={selStat.outros} />
         </div>
 
         <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
@@ -223,9 +234,10 @@ function MapPage() {
   return (
     <AppShell title="Mapa">
       <div className="mt-1 flex items-center gap-3 text-[11px] text-steel">
-        <Legenda cor={COR.feito} texto="Feito" />
-        <Legenda cor={COR.andamento} texto="Em andamento" />
+        <Legenda cor={COR.retirado} texto="Retirado" />
+        <Legenda cor={COR.recusado} texto="Recusado" />
         <Legenda cor={COR.pendente} texto="Pendente" />
+        <Legenda cor={COR.outros} texto="Outros" />
       </div>
 
       <div className="mt-3 rounded-xl border border-border bg-card p-2">
@@ -244,7 +256,7 @@ function MapPage() {
           </defs>
           {CONCELHOS.map((c) => {
             const k = fold(c.nome);
-            const s = porConcelho.get(k) ?? { total: 0, pendentes: 0, feitos: 0, andamento: 0 };
+            const s = porConcelho.get(k) ?? ZERO;
             return (
               <path
                 key={c.dico}
