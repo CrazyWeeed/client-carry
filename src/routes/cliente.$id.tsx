@@ -5,7 +5,9 @@ import { toast } from "sonner";
 import { AppShell } from "@/components/field/AppShell";
 import { StatusChip } from "@/components/field/ClientRow";
 import { StatusSheet, type ActionStatus } from "@/components/field/StatusSheet";
-import { nextOpenAfter, nextPendingAfter, useFieldStore } from "@/lib/store";
+import type { Client } from "@/lib/types";
+import { nextOpenAfter, nextPendingAfter, sortByZip, useFieldStore } from "@/lib/store";
+import { searchClients } from "@/lib/search";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 import { cleanAddress, fullAddress } from "@/lib/address";
@@ -14,6 +16,10 @@ import { smsUrl } from "@/lib/message";
 import { Phone, MapPin, Search, Check, X, CalendarClock, ChevronRight, PhoneMissed, PhoneOff, Ban, type LucideIcon } from "lucide-react";
 
 export const Route = createFileRoute("/cliente/$id")({
+  validateSearch: (search: Record<string, unknown>): { q?: string } => {
+    const v = search["q"];
+    return typeof v === "string" && v.trim() ? { q: v } : {};
+  },
   head: () => ({
     meta: [
       { title: "Cliente — Gestão de clientes" },
@@ -30,6 +36,7 @@ export const Route = createFileRoute("/cliente/$id")({
 
 function ClientPage() {
   const { id } = Route.useParams();
+  const { q: termo } = Route.useSearch();
   const clients = useFieldStore((s) => s.clients);
   const hydrated = useFieldStore((s) => s.hydrated);
   const setStatus = useFieldStore((s) => s.setStatus);
@@ -61,9 +68,13 @@ function ClientPage() {
   const mapsQuery = encodeURIComponent(fullAddress(client));
 
   const confirm = (status: ActionStatus, note: string, scheduledFor: string | null) => {
+    // Próximo: dentro da busca (se veio dela); senão, o próximo pendente da fila geral.
+    const before = termo
+      ? sortByZip(searchClients(useFieldStore.getState().clients, termo).filter((c) => c.status === "pending"))
+      : null;
+    const next = before ? nextInList(before, client.id) : nextPendingAfter(useFieldStore.getState().clients, client.id);
     setStatus(client.id, status, note, scheduledFor);
     setAction(null);
-    const next = nextPendingAfter(useFieldStore.getState().clients, client.id);
     // Calendar link for the appointment just made, shown in the toast so it is reachable after navigating away.
     const calReady = status === "scheduled" && !!scheduledFor;
     const calClient = {
@@ -77,7 +88,7 @@ function ClientPage() {
       action: calReady ? { label: "Adicionar ao calendário", onClick: () => addToCalendar(calClient) } : undefined,
       duration: 10000,
     });
-    if (next) navigate({ to: "/cliente/$id", params: { id: next.id } });
+    if (next) navigate({ to: "/cliente/$id", params: { id: next.id }, search: termo ? { q: termo } : {} });
     else navigate({ to: "/" });
   };
 
@@ -173,6 +184,13 @@ function ClientPage() {
       <div className="fixed inset-x-0 bottom-0 z-20 mx-auto w-full max-w-md border-t border-border bg-ink px-4 py-3">
         <button
           onClick={() => {
+            if (termo) {
+              const list = sortByZip(searchClients(clients, termo).filter((c) => c.status === "pending" || c.status === "scheduled"));
+              const next = nextInList(list, client.id);
+              if (next) navigate({ to: "/cliente/$id", params: { id: next.id }, search: { q: termo } });
+              else toast(`Fim da lista de "${termo}"`);
+              return;
+            }
             const next = nextOpenAfter(clients, client);
             if (next) navigate({ to: "/cliente/$id", params: { id: next.id } });
             else toast("Não há mais clientes pendentes ou agendados");
@@ -206,4 +224,11 @@ function ActionBtn({ onClick, className, icon: Icon, label }: { onClick: () => v
       {label}
     </button>
   );
+}
+
+/** Próximo item da lista depois do cliente atual (sem voltar ao início). */
+function nextInList(list: Client[], currentId: string): Client | null {
+  const i = list.findIndex((c) => c.id === currentId);
+  if (i < 0) return list[0] ?? null;
+  return list[i + 1] ?? null;
 }

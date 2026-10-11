@@ -12,10 +12,11 @@ export function StatusChip({ status }: { status: Client["status"] }) {
   );
 }
 
-export function ClientRow({ client, showTime }: { client: Client; showTime?: boolean }) {
+export function ClientRow({ client, showTime, search }: { client: Client; showTime?: boolean; search?: string }) {
   return (
     <Link
       to="/cliente/$id"
+      search={search?.trim() ? { q: search } : {}}
       params={{ id: client.id }}
       className="glass flex items-center gap-3 rounded-2xl p-3.5 tap"
     >

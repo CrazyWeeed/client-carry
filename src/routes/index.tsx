@@ -83,7 +83,7 @@ function Dashboard() {
           {results.length === 0 ? (
             <EmptyState title="Sem resultados" hint="Tenta outro nome, contrato ou Código Postal." />
           ) : (
-            results.map((c) => <ClientRow key={c.id} client={c} />)
+            results.map((c) => <ClientRow key={c.id} client={c} search={q} />)
           )}
         </section>
       ) : (
