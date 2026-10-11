@@ -6,7 +6,7 @@ import { concelhoOf, fold } from "@/lib/concelhos";
 import { ClientRow } from "@/components/field/ClientRow";
 import { sortByZip } from "@/lib/store";
 import shape from "@/data/norte_concelhos.json";
-import type { Client } from "@/lib/types";
+import type { Client, ClientStatus } from "@/lib/types";
 
 export const Route = createFileRoute("/mapa")({
   head: () => ({
@@ -93,15 +93,34 @@ function Gradiente({ id, s }: { id: string; s: Stat }) {
   );
 }
 
+/** viewBox para ampliar só um concelho (mesmas coordenadas do desenho geral). */
+function zoomBox(c: Concelho): string {
+  const xs = c.poly.flatMap((p) => p.flatMap((r) => r.map((pt) => pt[0] ?? 0)));
+  const ys = c.poly.flatMap((p) => p.flatMap((r) => r.map((pt) => pt[1] ?? 0)));
+  const pad = 2500;
+  const x0 = Math.min(...xs) - BOUNDS.minX - pad;
+  const y0 = BOUNDS.maxY - Math.max(...ys) - pad;
+  const w = Math.max(...xs) - Math.min(...xs) + pad * 2;
+  const h = Math.max(...ys) - Math.min(...ys) + pad * 2;
+  return `${x0.toFixed(0)} ${y0.toFixed(0)} ${w.toFixed(0)} ${h.toFixed(0)}`;
+}
+
+const FILTROS: { value: ClientStatus | "todos"; label: string }[] = [
+  { value: "todos", label: "Todos" },
+  { value: "pending", label: "Pendente" },
+  { value: "noAnswer", label: "Não atendeu" },
+  { value: "wrongPhone", label: "Tel. errado" },
+  { value: "notAssigned", label: "Não atribuído" },
+  { value: "scheduled", label: "Agendado" },
+  { value: "analysis", label: "Em análise" },
+  { value: "refused", label: "Recusado" },
+  { value: "withdrawn", label: "Retirado" },
+];
+
 function MapPage() {
   const clients = useFieldStore((s) => s.clients);
   const [selected, setSelected] = useState<string | null>(null);
-  const [showList, setShowList] = useState(false);
-
-  const regionClients = useMemo(
-    () => (selected ? sortByZip(clients.filter((c) => fold(concelhoOf(c) ?? "") === selected)) : []),
-    [clients, selected],
-  );
+  const [filtro, setFiltro] = useState<ClientStatus | "todos">("todos");
 
   const { porConcelho, foraRegiao, semConcelho } = useMemo(() => {
     const por = new Map<string, Stat>();
@@ -123,8 +142,84 @@ function MapPage() {
   }, [clients]);
 
   const sel = selected ? CONCELHOS.find((c) => fold(c.nome) === selected) : null;
-  const selStat = selected ? porConcelho.get(selected) ?? { total: 0, pendentes: 0, feitos: 0, andamento: 0 } : null;
+  const selStat: Stat = (selected && porConcelho.get(selected)) || { total: 0, pendentes: 0, feitos: 0, andamento: 0 };
 
+  const regionClients = useMemo(
+    () => (selected ? sortByZip(clients.filter((c) => fold(concelhoOf(c) ?? "") === selected)) : []),
+    [clients, selected],
+  );
+  const regionVisible = useMemo(
+    () => (filtro === "todos" ? regionClients : regionClients.filter((c) => c.status === filtro)),
+    [regionClients, filtro],
+  );
+
+  // ----- Visão de uma região: só o concelho, ampliado, com a lista embaixo -----
+  if (sel) {
+    return (
+      <AppShell title="Mapa">
+        <button
+          onClick={() => { setSelected(null); setFiltro("todos"); }}
+          className="mt-1 flex items-center gap-1.5 text-[13px] text-steel tap"
+        >
+          ← Norte
+        </button>
+
+        <div className="mt-2 flex items-baseline justify-between">
+          <p className="font-display text-[20px] font-semibold">{sel.nome}</p>
+          <span className="text-[12px] text-steel">{selStat.total} clientes</span>
+        </div>
+
+        <div className="mt-3 rounded-xl border border-border bg-card p-2">
+          <svg viewBox={zoomBox(sel)} className="h-auto w-full" role="img" aria-label={`Mapa de ${sel.nome}`}>
+            <defs>
+              <Gradiente id={gid(selected!)} s={selStat} />
+            </defs>
+            <path
+              d={PATHS.get(selected!)}
+              fillRule="evenodd"
+              fill={selStat.total === 0 ? COR.vazio : `url(#${gid(selected!)})`}
+              stroke="oklch(0.13 0 0)"
+              strokeWidth={60}
+            />
+          </svg>
+        </div>
+
+        <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+          <Num label="Pendentes" value={selStat.pendentes} />
+          <Num label="Feitos" value={selStat.feitos} />
+          <Num label="Em andamento" value={selStat.andamento} />
+        </div>
+
+        <div className="mt-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
+          {FILTROS.map((f) => {
+            const active = filtro === f.value;
+            return (
+              <button
+                key={f.value}
+                onClick={() => setFiltro(f.value)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold tap ${active ? "bg-accent text-ink" : "glass-soft text-steel"}`}
+              >
+                {f.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-3 flex flex-col gap-2">
+          <p className="text-[11px] tracking-[0.2em] text-steel uppercase">
+            {regionVisible.length} cliente{regionVisible.length === 1 ? "" : "s"}
+          </p>
+          {regionVisible.length === 0 ? (
+            <p className="text-[12px] text-steel">Nenhum cliente com este filtro.</p>
+          ) : (
+            regionVisible.map((c) => <ClientRow key={c.id} client={c} />)
+          )}
+        </div>
+      </AppShell>
+    );
+  }
+
+  // ----- Visão do norte: todos os concelhos -----
   return (
     <AppShell title="Mapa">
       <div className="mt-1 flex items-center gap-3 text-[11px] text-steel">
@@ -150,21 +245,16 @@ function MapPage() {
           {CONCELHOS.map((c) => {
             const k = fold(c.nome);
             const s = porConcelho.get(k) ?? { total: 0, pendentes: 0, feitos: 0, andamento: 0 };
-            const active = selected === k;
-            const fill = s.total === 0 ? COR.vazio : `url(#${gid(k)})`;
             return (
               <path
                 key={c.dico}
                 d={PATHS.get(k)}
                 fillRule="evenodd"
-                fill={fill}
-                stroke={active ? "oklch(0.95 0 0)" : "oklch(0.13 0 0)"}
-                strokeWidth={active ? 900 : 300}
-                onClick={() => {
-                  setSelected(active ? null : k);
-                  setShowList(false);
-                }}
-                className="cursor-pointer transition-[fill] duration-200"
+                fill={s.total === 0 ? COR.vazio : `url(#${gid(k)})`}
+                stroke="oklch(0.13 0 0)"
+                strokeWidth={300}
+                onClick={() => { setSelected(k); setFiltro("todos"); }}
+                className="cursor-pointer"
               >
                 <title>{c.nome}</title>
               </path>
@@ -172,41 +262,6 @@ function MapPage() {
           })}
         </svg>
       </div>
-
-      <div className="mt-3 min-h-20">
-        {sel && selStat ? (
-          <div className="rounded-xl border border-border bg-card px-4 py-3">
-            <div className="flex items-baseline justify-between">
-              <p className="font-display text-[17px] font-semibold">{sel.nome}</p>
-              <span className="text-[12px] text-steel">{selStat.total} clientes</span>
-            </div>
-            <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-              <Num label="Pendentes" value={selStat.pendentes} />
-              <Num label="Feitos" value={selStat.feitos} />
-              <Num label="Em andamento" value={selStat.andamento} />
-            </div>
-            <button
-              onClick={() => setShowList((v) => !v)}
-              className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl bg-accent font-display text-[14px] font-bold text-ink tap"
-            >
-              {showList ? "Ocultar clientes" : "Ver clientes"}
-            </button>
-          </div>
-        ) : (
-          <p className="px-1 text-[12px] text-steel">Toque num concelho para ver a situação.</p>
-        )}
-      </div>
-
-      {sel && showList && (
-        <div className="mt-3 flex flex-col gap-2">
-          <p className="text-[11px] tracking-[0.2em] text-steel uppercase">{sel.nome} · {regionClients.length}</p>
-          {regionClients.length === 0 ? (
-            <p className="text-[12px] text-steel">Nenhum cliente nesta região.</p>
-          ) : (
-            regionClients.map((c) => <ClientRow key={c.id} client={c} />)
-          )}
-        </div>
-      )}
 
       {(foraRegiao > 0 || semConcelho > 0) && (
         <div className="mt-3 flex flex-col gap-2 text-[13px]">
@@ -218,6 +273,7 @@ function MapPage() {
           )}
         </div>
       )}
+      <p className="mt-3 px-1 text-[12px] text-steel">Toque num concelho para abrir a região.</p>
     </AppShell>
   );
 }
