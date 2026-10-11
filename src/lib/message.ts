@@ -50,36 +50,10 @@ export function whatsappUrl(c: Client): string | null {
   return `https://wa.me/${n}?text=${encodeURIComponent(noAnswerMessage(c))}`;
 }
 
-/** Remove acentos e caracteres fora do GSM-7, pra o SMS sair em 1 mensagem (160 caracteres). */
-function gsm7(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/º/g, ".")
-    .replace(/ª/g, ".")
-    .replace(/[^\x20-\x7E\n]/g, "");
-}
 
-/** SMS curto: cabe em 1 mensagem (160 caracteres, sem acentos). */
-export function smsMessage(c: Client): string {
-  const nome = titleName(c.name);
-  const contrato = realContract(c);
-  const ref = contrato ? `Contrato n. ${contrato}. ` : "";
-  let text = gsm7(
-    `Ola Sr./Sra. ${nome}, sou prestador de servicos da PROSEGUR (retirada de alarme). ` +
-      `${ref}Pode indicar um horario? Obrigado.`,
-  );
-  if (text.length > 160) {
-    // nome muito longo: usa só o primeiro nome
-    const first = nome.split(" ")[0];
-    text = gsm7(`Ola Sr./Sra. ${first}, sou prestador de servicos da PROSEGUR. ${ref}Pode indicar um horario? Obrigado.`);
-  }
-  return text.slice(0, 160);
-}
-
-/** Abre o app de SMS com o texto curto já escrito. */
+/** Abre o app de SMS com a mensagem completa já escrita (teste). */
 export function smsUrl(c: Client): string | null {
   const n = waNumber(c.phone);
   if (!n) return null;
-  return `sms:+${n}?body=${encodeURIComponent(smsMessage(c))}`;
+  return `sms:+${n}?body=${encodeURIComponent(noAnswerMessage(c))}`;
 }
