@@ -23,24 +23,31 @@ export const Route = createFileRoute("/mapa")({
 });
 
 type Concelho = { dico: string; nome: string; distrito: string; poly: number[][][][] };
-const CONCELHOS = shape as Concelho[];
+const ALL_CONCELHOS = shape as Concelho[];
+
+// Área do mapa: só o oeste e o centro do norte. Concelhos a leste de Valpaços são removidos.
+const centroidX = (c: Concelho) => {
+  const xs = c.poly.flatMap((p) => p.flatMap((r) => r.map((pt) => pt[0] ?? 0)));
+  return xs.reduce((a, b) => a + b, 0) / xs.length;
+};
+const VALPACOS_CX = centroidX(ALL_CONCELHOS.find((c) => fold(c.nome) === "valpacos")!);
+const CONCELHOS = ALL_CONCELHOS.filter((c) => centroidX(c) <= VALPACOS_CX + 1000);
 
 // Limites do desenho (coordenadas em metros, PT-TM06).
 const BOUNDS = (() => {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   for (const c of CONCELHOS) for (const p of c.poly) for (const ring of p) for (const pt of ring) {
-    const x = pt[0] ?? 0, y = pt[1] ?? 0;
+    const x = pt[0] ?? 0;
     if (x < minX) minX = x; if (x > maxX) maxX = x;
+  }
+  for (const c of ALL_CONCELHOS) for (const p of c.poly) for (const ring of p) for (const pt of ring) {
+    const y = pt[1] ?? 0;
     if (y < minY) minY = y; if (y > maxY) maxY = y;
   }
   return { minX, minY, maxX, maxY };
 })();
 
-// Corte à direita: nada além de Valpaços (só o sentido horizontal; a altura não muda).
-const VALPACOS_MAX_X = Math.max(
-  ...CONCELHOS.filter((c) => fold(c.nome) === "valpacos").flatMap((c) => c.poly.flatMap((p) => p.flatMap((r) => r.map((pt) => pt[0] ?? 0)))),
-);
-const CUT_W = VALPACOS_MAX_X + 6000 - BOUNDS.minX;
+const VIEW_W = BOUNDS.maxX - BOUNDS.minX + 3000;
 
 const PATHS = new Map(
   CONCELHOS.map((c) => [
@@ -128,8 +135,8 @@ function MapPage() {
 
       <div className="mt-3 rounded-xl border border-border bg-card p-2">
         <svg
-          viewBox={`0 0 ${CUT_W.toFixed(0)} ${(BOUNDS.maxY - BOUNDS.minY).toFixed(0)}`}
-          className="h-auto w-full overflow-hidden"
+          viewBox={`0 0 ${VIEW_W.toFixed(0)} ${(BOUNDS.maxY - BOUNDS.minY).toFixed(0)}`}
+          className="h-auto w-full"
           role="img"
           aria-label="Mapa dos concelhos do norte"
         >
