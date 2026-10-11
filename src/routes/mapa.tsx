@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import { AppShell } from "@/components/field/AppShell";
 import { useFieldStore } from "@/lib/store";
 import { concelhoOf, fold } from "@/lib/concelhos";
+import { ClientRow } from "@/components/field/ClientRow";
+import { sortByZip } from "@/lib/store";
 import shape from "@/data/norte_concelhos.json";
 import type { Client } from "@/lib/types";
 
@@ -47,29 +49,46 @@ const PATHS = new Map(
   ]),
 );
 
-type Situacao = "verde" | "amarelo" | "vermelho" | "cinza";
 type Stat = { total: number; pendentes: number; feitos: number; andamento: number };
 
 // "Feito" = retirado ou recusado. Agendado e em análise ainda não contam como feito.
 const isFeito = (c: Client) => c.status === "withdrawn" || c.status === "refused";
 
-function situacao(s: Stat): Situacao {
-  if (s.total === 0) return "cinza";
-  if (s.feitos === s.total) return "verde";
-  if (s.feitos === 0) return "vermelho";
-  return "amarelo";
-}
-
-const FILL: Record<Situacao, string> = {
-  verde: "oklch(0.72 0.1 155)",
-  amarelo: "oklch(0.8 0.12 85)",
-  vermelho: "oklch(0.66 0.14 25)",
-  cinza: "oklch(0.3 0 0)",
+const COR = {
+  feito: "oklch(0.72 0.1 155)",      // verde: retirado ou recusado
+  andamento: "oklch(0.8 0.12 85)",   // amarelo: agendado ou em análise
+  pendente: "oklch(0.66 0.14 25)",   // vermelho: pendente
+  vazio: "oklch(0.3 0 0)",           // cinza: sem clientes
 };
+
+const gid = (k: string) => "g-" + k.replace(/[^a-z0-9]+/g, "-");
+
+/** Faixas proporcionais (esquerda -> direita): feito, em andamento, pendente. */
+function Gradiente({ id, s }: { id: string; s: Stat }) {
+  const f = s.feitos / s.total;
+  const a = s.andamento / s.total;
+  const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
+  return (
+    <linearGradient id={id} x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stopColor={COR.feito} />
+      <stop offset={pct(f)} stopColor={COR.feito} />
+      <stop offset={pct(f)} stopColor={COR.andamento} />
+      <stop offset={pct(f + a)} stopColor={COR.andamento} />
+      <stop offset={pct(f + a)} stopColor={COR.pendente} />
+      <stop offset="1" stopColor={COR.pendente} />
+    </linearGradient>
+  );
+}
 
 function MapPage() {
   const clients = useFieldStore((s) => s.clients);
   const [selected, setSelected] = useState<string | null>(null);
+  const [showList, setShowList] = useState(false);
+
+  const regionClients = useMemo(
+    () => (selected ? sortByZip(clients.filter((c) => fold(concelhoOf(c) ?? "") === selected)) : []),
+    [clients, selected],
+  );
 
   const { porConcelho, foraRegiao, semConcelho } = useMemo(() => {
     const por = new Map<string, Stat>();
@@ -96,10 +115,9 @@ function MapPage() {
   return (
     <AppShell title="Mapa">
       <div className="mt-1 flex items-center gap-3 text-[11px] text-steel">
-        <Legenda cor={FILL.verde} texto="Tudo feito" />
-        <Legenda cor={FILL.amarelo} texto="Parcial" />
-        <Legenda cor={FILL.vermelho} texto="Nada feito" />
-        <Legenda cor={FILL.cinza} texto="Sem clientes" />
+        <Legenda cor={COR.feito} texto="Feito" />
+        <Legenda cor={COR.andamento} texto="Em andamento" />
+        <Legenda cor={COR.pendente} texto="Pendente" />
       </div>
 
       <div className="mt-3 rounded-xl border border-border bg-card p-2">
@@ -109,19 +127,30 @@ function MapPage() {
           role="img"
           aria-label="Mapa dos concelhos do norte"
         >
+          <defs>
+            {CONCELHOS.map((c) => {
+              const k = fold(c.nome);
+              const s = porConcelho.get(k);
+              return s && s.total > 0 ? <Gradiente key={c.dico} id={gid(k)} s={s} /> : null;
+            })}
+          </defs>
           {CONCELHOS.map((c) => {
             const k = fold(c.nome);
             const s = porConcelho.get(k) ?? { total: 0, pendentes: 0, feitos: 0, andamento: 0 };
             const active = selected === k;
+            const fill = s.total === 0 ? COR.vazio : `url(#${gid(k)})`;
             return (
               <path
                 key={c.dico}
                 d={PATHS.get(k)}
                 fillRule="evenodd"
-                fill={FILL[situacao(s)]}
+                fill={fill}
                 stroke={active ? "oklch(0.95 0 0)" : "oklch(0.13 0 0)"}
                 strokeWidth={active ? 900 : 300}
-                onClick={() => setSelected(active ? null : k)}
+                onClick={() => {
+                  setSelected(active ? null : k);
+                  setShowList(false);
+                }}
                 className="cursor-pointer transition-[fill] duration-200"
               >
                 <title>{c.nome}</title>
@@ -143,11 +172,28 @@ function MapPage() {
               <Num label="Feitos" value={selStat.feitos} />
               <Num label="Em andamento" value={selStat.andamento} />
             </div>
+            <button
+              onClick={() => setShowList((v) => !v)}
+              className="mt-4 flex min-h-11 w-full items-center justify-center rounded-xl bg-accent font-display text-[14px] font-bold text-ink tap"
+            >
+              {showList ? "Ocultar clientes" : "Ver clientes"}
+            </button>
           </div>
         ) : (
           <p className="px-1 text-[12px] text-steel">Toque num concelho para ver a situação.</p>
         )}
       </div>
+
+      {sel && showList && (
+        <div className="mt-3 flex flex-col gap-2">
+          <p className="text-[11px] tracking-[0.2em] text-steel uppercase">{sel.nome} · {regionClients.length}</p>
+          {regionClients.length === 0 ? (
+            <p className="text-[12px] text-steel">Nenhum cliente nesta região.</p>
+          ) : (
+            regionClients.map((c) => <ClientRow key={c.id} client={c} />)
+          )}
+        </div>
+      )}
 
       {(foraRegiao > 0 || semConcelho > 0) && (
         <div className="mt-3 flex flex-col gap-2 text-[13px]">
