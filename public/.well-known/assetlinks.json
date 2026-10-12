@@ -1,8 +1,0 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "pt.latech.fieldconnect",
-        "sha256_cert_fingerprints": ["DA:8B:10:61:C7:B2:97:CD:7F:28:FA:D1:38:4C:88:DB:1E:12:00:F8:43:02:B0:7E:D3:D3:CA:D6:F2:A7:F6:FF"]
-      }
-    }]
