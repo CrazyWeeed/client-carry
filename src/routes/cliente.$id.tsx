@@ -9,7 +9,7 @@ import { Sheet } from "@/components/field/Sheet";
 import type { Client } from "@/lib/types";
 import { nextOpenAfter, nextPendingAfter, sortByZip, useFieldStore } from "@/lib/store";
 import { searchClients } from "@/lib/search";
-import { AUTO_NOTE } from "@/lib/store";
+import { AUTO_NOTE, patchHistoryEntry, removeHistoryEntry } from "@/lib/store";
 import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 import { cleanAddress, fullAddress } from "@/lib/address";
@@ -43,9 +43,13 @@ function ClientPage() {
   const hydrated = useFieldStore((s) => s.hydrated);
   const setStatus = useFieldStore((s) => s.setStatus);
   const replaceLatest = useFieldStore((s) => s.replaceLatest);
+  const updateClient = useFieldStore((s) => s.updateClient);
   const navigate = useNavigate();
   const [action, setAction] = useState<ActionStatus | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [histIdx, setHistIdx] = useState<number | null>(null);
+  const [histStatus, setHistStatus] = useState<"withdrawn" | "refused" | "pending" | null>(null);
+  const [histNote, setHistNote] = useState("");
   const [editMode, setEditMode] = useState(false);
   const [editStatus, setEditStatus] = useState<"withdrawn" | "refused" | "pending" | null>(null);
   const [editNote, setEditNote] = useState("");
@@ -193,7 +197,11 @@ function ClientPage() {
         <div className="glass-soft space-y-3 rounded-2xl p-3.5">
           {client.history.length === 0 && <p className="text-[12px] text-steel">Sem registos.</p>}
           {client.history.map((h, i) => (
-            <div key={i} className="flex gap-2.5">
+            <button
+              key={i}
+              onClick={() => { setHistIdx(i); setHistStatus(h.status === "withdrawn" || h.status === "refused" || h.status === "pending" ? h.status : null); setHistNote(h.note ?? ""); }}
+              className="flex w-full gap-2.5 text-left tap"
+            >
               <span className={`mt-1.5 size-2 shrink-0 rounded-full ${STATUS_STYLE[h.status].dot}`} />
               <div className="min-w-0">
                 <p className="text-[13px] font-medium">
@@ -203,7 +211,7 @@ function ClientPage() {
                 </p>
                 <p className="text-[11px] text-steel">{format(new Date(h.timestamp), "dd/MM/yyyy HH:mm")}</p>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </section>
@@ -246,6 +254,71 @@ function ClientPage() {
         onClose={() => { setAction(null); setEditMode(false); }}
         onConfirm={confirm}
       />
+
+      <Sheet open={histIdx !== null} onClose={() => setHistIdx(null)} title="Editar registro">
+        {histIdx !== null && client.history[histIdx] && (
+          <p className="text-[12px] text-steel">
+            {format(new Date(client.history[histIdx]!.timestamp), "dd/MM/yyyy HH:mm")} · {STATUS_LABEL[client.history[histIdx]!.status]}
+          </p>
+        )}
+        <div className="mt-3 flex flex-col gap-2">
+          {EDIT_STATUS.map((o) => {
+            const active = histStatus === o.value;
+            return (
+              <button
+                key={o.value}
+                onClick={() => setHistStatus(o.value)}
+                className={`min-h-12 rounded-xl px-4 text-left font-display text-[15px] font-bold tap ${o.inactive} ${active ? o.active : ""}`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+        <textarea
+          value={histNote}
+          onChange={(e) => setHistNote(e.target.value)}
+          rows={4}
+          placeholder="Observação"
+          className="glass-soft mt-3 w-full rounded-xl p-3 text-[14px] text-mist outline-none"
+        />
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <button
+            onClick={() => {
+              if (histIdx === null) return;
+              if (!window.confirm("Excluir este registro do histórico?")) return;
+              const idx = histIdx;
+              updateClient(client.id, (c) => removeHistoryEntry(c, idx));
+              setHistIdx(null);
+              toast.success("Registro excluído");
+            }}
+            className="min-h-12 rounded-xl border border-rose/30 bg-rose/20 font-display text-[13px] font-bold text-rose tap"
+          >
+            Excluir
+          </button>
+          <button
+            onClick={() => setHistIdx(null)}
+            className="glass-soft min-h-12 rounded-xl font-display text-[13px] font-bold text-steel tap"
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={!histStatus}
+            onClick={() => {
+              if (histIdx === null || !histStatus) return;
+              const idx = histIdx;
+              const st = histStatus;
+              const nota = histNote.trim();
+              updateClient(client.id, (c) => patchHistoryEntry(c, idx, st, nota));
+              setHistIdx(null);
+              toast.success("Registro salvo");
+            }}
+            className="min-h-12 rounded-xl bg-mint font-display text-[13px] font-bold text-ink tap disabled:opacity-40"
+          >
+            Salvar
+          </button>
+        </div>
+      </Sheet>
 
       <Sheet open={editOpen} onClose={() => setEditOpen(false)} title="Editar status">
         <div className="flex flex-col gap-2">

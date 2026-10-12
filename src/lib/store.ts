@@ -34,6 +34,8 @@ interface FieldState {
   setStatus: (id: string, status: ClientStatus, note: string, scheduledFor?: string | null) => void;
   /** Corrige o último registro (status e observação), sobrepondo-o, sem criar entrada nova. */
   replaceLatest: (id: string, status: ClientStatus, note: string, scheduledFor?: string | null) => void;
+  /** Aplica uma função a um cliente (edição/exclusão de registros do histórico). */
+  updateClient: (id: string, fn: (c: Client) => Client) => void;
   clearAll: () => void;
 }
 
@@ -117,6 +119,10 @@ export const useFieldStore = create<FieldState>()(
         const currentIds = new Set(incoming.map((c) => c.id));
         set({ clients: dedupeClients(Array.from(map.values()), currentIds), importedAt: now, importedFileName: fileName });
         return { added, updated };
+      },
+
+      updateClient: (id, fn) => {
+        set({ clients: get().clients.map((c) => (c.id === id ? fn(c) : c)) });
       },
 
       replaceLatest: (id, status, note, scheduledFor = null) => {
@@ -311,4 +317,28 @@ export function contactAttempts(c: Client): number {
 export function lastContactAt(c: Client): string | null {
   const h = c.history.find((x) => x.status === "noAnswer" || x.status === "wrongPhone" || x.status === "notAssigned");
   return h ? h.timestamp : null;
+}
+
+/** Edita um registro do histórico (status e observação). Se for o último, atualiza o status atual. */
+export function patchHistoryEntry(c: Client, index: number, status: ClientStatus, note: string): Client {
+  const history = c.history.map((h, i) => (i === index ? { ...h, status, note, scheduledFor: status === "scheduled" ? h.scheduledFor ?? null : null } : h));
+  if (index === 0) {
+    const latest = history[0]!;
+    return { ...c, history, status, scheduledFor: latest.scheduledFor ?? null, lastModified: new Date().toISOString() };
+  }
+  return { ...c, history, lastModified: new Date().toISOString() };
+}
+
+/** Exclui um registro do histórico. Se for o último, o status atual volta ao registro anterior (ou pendente). */
+export function removeHistoryEntry(c: Client, index: number): Client {
+  const history = c.history.filter((_, i) => i !== index);
+  const latest = history[0];
+  const status: ClientStatus = latest ? latest.status : "pending";
+  return {
+    ...c,
+    history,
+    status: index === 0 ? status : c.status,
+    scheduledFor: index === 0 ? (latest?.status === "scheduled" ? latest.scheduledFor ?? null : null) : c.scheduledFor,
+    lastModified: new Date().toISOString(),
+  };
 }
