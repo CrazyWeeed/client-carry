@@ -32,6 +32,8 @@ interface FieldState {
   setHydrated: () => void;
   mergeClients: (incoming: Client[], fileName: string) => { added: number; updated: number };
   setStatus: (id: string, status: ClientStatus, note: string, scheduledFor?: string | null) => void;
+  /** Corrige a observação do último registro (mesmo status), sem criar entrada nova. */
+  editLatestNote: (id: string, note: string) => void;
   clearAll: () => void;
 }
 
@@ -115,6 +117,17 @@ export const useFieldStore = create<FieldState>()(
         const currentIds = new Set(incoming.map((c) => c.id));
         set({ clients: dedupeClients(Array.from(map.values()), currentIds), importedAt: now, importedFileName: fileName });
         return { added, updated };
+      },
+
+      editLatestNote: (id, note) => {
+        const now = new Date().toISOString();
+        set({
+          clients: get().clients.map((c) => {
+            if (c.id !== id || c.history.length === 0) return c;
+            const [latest, ...rest] = c.history;
+            return { ...c, history: [{ ...latest!, note }, ...rest], lastModified: now };
+          }),
+        });
       },
 
       setStatus: (id, status, note, scheduledFor = null) => {
