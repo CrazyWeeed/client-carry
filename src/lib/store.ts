@@ -32,8 +32,8 @@ interface FieldState {
   setHydrated: () => void;
   mergeClients: (incoming: Client[], fileName: string) => { added: number; updated: number };
   setStatus: (id: string, status: ClientStatus, note: string, scheduledFor?: string | null) => void;
-  /** Corrige a observação do último registro (mesmo status), sem criar entrada nova. */
-  editLatestNote: (id: string, note: string) => void;
+  /** Corrige o último registro (status e observação), sobrepondo-o, sem criar entrada nova. */
+  replaceLatest: (id: string, status: ClientStatus, note: string, scheduledFor?: string | null) => void;
   clearAll: () => void;
 }
 
@@ -119,13 +119,19 @@ export const useFieldStore = create<FieldState>()(
         return { added, updated };
       },
 
-      editLatestNote: (id, note) => {
+      replaceLatest: (id, status, note, scheduledFor = null) => {
         const now = new Date().toISOString();
         set({
           clients: get().clients.map((c) => {
-            if (c.id !== id || c.history.length === 0) return c;
+            if (c.id !== id) return c;
+            if (c.history.length === 0) {
+              const entry: HistoryEntry = { timestamp: now, status, note, scheduledFor };
+              return { ...c, status, scheduledFor: status === "scheduled" ? scheduledFor : null, history: [entry], lastModified: now };
+            }
             const [latest, ...rest] = c.history;
-            return { ...c, history: [{ ...latest!, note }, ...rest], lastModified: now };
+            // Mantém a posição (timestamp original) do registro que está sendo corrigido.
+            const entry: HistoryEntry = { timestamp: latest!.timestamp, status, note, scheduledFor };
+            return { ...c, status, scheduledFor: status === "scheduled" ? scheduledFor : null, history: [entry, ...rest], lastModified: now };
           }),
         });
       },

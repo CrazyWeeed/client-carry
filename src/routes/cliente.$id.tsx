@@ -42,7 +42,7 @@ function ClientPage() {
   const clients = useFieldStore((s) => s.clients);
   const hydrated = useFieldStore((s) => s.hydrated);
   const setStatus = useFieldStore((s) => s.setStatus);
-  const editLatestNote = useFieldStore((s) => s.editLatestNote);
+  const replaceLatest = useFieldStore((s) => s.replaceLatest);
   const navigate = useNavigate();
   const [action, setAction] = useState<ActionStatus | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -282,15 +282,8 @@ function ClientPage() {
             disabled={!editStatus}
             onClick={() => {
               if (!editStatus) return;
-              const nota = editNote.trim();
-              const last = client.history[0];
-              const mesmoStatus = client.status === editStatus && !!last && last.status === editStatus;
-              if (mesmoStatus) {
-                // Só corrigiu o texto: atualiza o último registro, sem duplicar no histórico.
-                if (nota !== (last?.note ?? "").trim()) editLatestNote(client.id, nota);
-              } else {
-                setStatus(client.id, editStatus, nota, null);
-              }
+              // Sobrepõe o último registro: não cria outro por cima.
+              replaceLatest(client.id, editStatus, editNote.trim(), null);
               setEditOpen(false);
               toast.success(`${client.name}: ${STATUS_LABEL[editStatus]} (editado)`, { id: "status-cliente" });
             }}

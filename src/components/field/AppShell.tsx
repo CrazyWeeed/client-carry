@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import type { HistoryEntry } from "@/lib/types";
 import { useFieldStore, dedupeClients, AUTO_NOTE } from "@/lib/store";
 import { parseWorkbook, saveOriginalFile, exportWorkbook } from "@/lib/excel";
 import { Sheet } from "./Sheet";
@@ -23,10 +24,14 @@ export function AppShell({ children, title, hideNav, back }: { children: ReactNo
     if (hydrated) return;
     void Promise.resolve(useFieldStore.persist.rehydrate()).then(() => {
       // Repair duplicates saved by older versions: one client = one record.
+      // Limpeza de repetidos roda só uma vez por aparelho (marcador no localStorage).
+      const RUN_KEY = "field-connect:cleanup-history-v1";
+      const runOnce = !localStorage.getItem(RUN_KEY);
+      if (runOnce) localStorage.setItem(RUN_KEY, new Date().toISOString());
       const cur = useFieldStore.getState().clients;
       const clean = dedupeClients(cur).map((c) => ({
         ...c,
-        history: c.history.filter((h) => h.note !== AUTO_NOTE),
+        history: runOnce ? collapseRepeats(c.history.filter((h) => h.note !== AUTO_NOTE)) : c.history.filter((h) => h.note !== AUTO_NOTE),
       }));
       useFieldStore.setState({ clients: clean });
     });
@@ -291,4 +296,20 @@ function BottomNav() {
       </div>
     </nav>
   );
+}
+
+/**
+ * Junta registros repetidos feitos por versões antigas: entradas seguidas com o mesmo
+ * status e a mesma observação (diferindo só em espaços ou pontuação) viram uma só.
+ * Mantém a mais recente, que vem primeiro.
+ */
+function collapseRepeats(history: HistoryEntry[]): HistoryEntry[] {
+  const norm = (t: string) => t.toLowerCase().replace(/[\s.,;:!?]+/g, " ").trim();
+  const out: HistoryEntry[] = [];
+  for (const h of history) {
+    const prev = out[out.length - 1];
+    if (prev && prev.status === h.status && norm(prev.note) === norm(h.note)) continue;
+    out.push(h);
+  }
+  return out;
 }
