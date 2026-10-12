@@ -9,7 +9,8 @@ import { Sheet } from "@/components/field/Sheet";
 import type { Client } from "@/lib/types";
 import { nextOpenAfter, nextPendingAfter, sortByZip, useFieldStore } from "@/lib/store";
 import { searchClients } from "@/lib/search";
-import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL, type ClientStatus } from "@/lib/types";
+import { AUTO_NOTE } from "@/lib/store";
+import { STATUS_LABEL, STATUS_STYLE, TYPE_LABEL } from "@/lib/types";
 import { addToCalendar, hasCalendarEvent } from "@/lib/calendar";
 import { cleanAddress, fullAddress } from "@/lib/address";
 import { Send } from "lucide-react";
@@ -45,8 +46,8 @@ function ClientPage() {
   const [action, setAction] = useState<ActionStatus | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editChoice, setEditChoice] = useState<"pending" | null>(null);
-  const [pendNote, setPendNote] = useState("");
+  const [editStatus, setEditStatus] = useState<"withdrawn" | "refused" | "pending" | null>(null);
+  const [editNote, setEditNote] = useState("");
 
   const client = clients.find((c) => c.id === id);
 
@@ -123,7 +124,13 @@ function ClientPage() {
           <div className="flex shrink-0 items-center gap-2">
             <StatusChip status={client.status} />
             <button
-              onClick={() => { setEditChoice(null); setPendNote(""); setEditOpen(true); }}
+              onClick={() => {
+                const current = client.status;
+                setEditStatus(current === "withdrawn" || current === "refused" || current === "pending" ? current : null);
+                const last = [...client.history].sort((a, b) => b.timestamp.localeCompare(a.timestamp)).find((h) => h.note && h.note !== AUTO_NOTE);
+                setEditNote(last?.note ?? "");
+                setEditOpen(true);
+              }}
               className="glass-soft rounded-lg px-2.5 py-1 text-[12px] font-semibold text-steel tap"
             >
               Editar
@@ -240,62 +247,58 @@ function ClientPage() {
       />
 
       <Sheet open={editOpen} onClose={() => setEditOpen(false)} title="Editar status">
-        <p className="text-[12px] text-steel">Escolha o novo status. Para pendente, a observação fica aqui mesmo.</p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          {EDIT_OPTIONS.map((o) => {
-            const active = client.status === o.value;
+        <div className="flex flex-col gap-2">
+          {EDIT_STATUS.map((o) => {
+            const active = editStatus === o.value;
             return (
               <button
                 key={o.value}
-                onClick={() => {
-                  if (o.value === "pending") { setEditChoice("pending"); return; }
-                  setEditOpen(false);
-                  setEditMode(true);
-                  setAction(o.value as ActionStatus);
-                }}
-                className={`min-h-11 rounded-xl px-3 text-[13px] font-semibold tap ${active ? "bg-accent text-ink" : "glass-soft text-mist"}`}
+                onClick={() => setEditStatus(o.value)}
+                className={`min-h-12 rounded-xl px-4 text-left font-display text-[15px] font-bold tap ${o.inactive} ${active ? o.active : ""}`}
               >
                 {o.label}
               </button>
             );
           })}
         </div>
-        {editChoice === "pending" && (
-          <div className="mt-4 flex flex-col gap-2">
-            <textarea
-              value={pendNote}
-              onChange={(e) => setPendNote(e.target.value)}
-              rows={3}
-              placeholder="Observação (opcional)"
-              className="glass-soft rounded-xl p-3 text-[14px] text-mist outline-none"
-            />
-            <button
-              onClick={() => {
-                setStatus(client.id, "pending", pendNote.trim(), null);
-                setEditOpen(false);
-                setEditChoice(null);
-                toast.success(`${client.name}: Pendente (editado)`, { id: "status-cliente" });
-              }}
-              className="min-h-11 rounded-xl bg-accent font-display text-[14px] font-bold text-ink tap"
-            >
-              Salvar como pendente
-            </button>
-          </div>
-        )}
+
+        <textarea
+          value={editNote}
+          onChange={(e) => setEditNote(e.target.value)}
+          rows={4}
+          placeholder="Observação"
+          className="glass-soft mt-3 w-full rounded-xl p-3 text-[14px] text-mist outline-none"
+        />
+
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setEditOpen(false)}
+            className="glass-soft min-h-12 rounded-xl font-display text-[14px] font-bold text-steel tap"
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={!editStatus}
+            onClick={() => {
+              if (!editStatus) return;
+              setStatus(client.id, editStatus, editNote.trim(), null);
+              setEditOpen(false);
+              toast.success(`${client.name}: ${STATUS_LABEL[editStatus]} (editado)`, { id: "status-cliente" });
+            }}
+            className="min-h-12 rounded-xl bg-mint font-display text-[14px] font-bold text-ink tap disabled:opacity-40"
+          >
+            Salvar
+          </button>
+        </div>
       </Sheet>
     </AppShell>
   );
 }
 
-const EDIT_OPTIONS: { value: ClientStatus; label: string }[] = [
-  { value: "pending", label: "Pendente" },
-  { value: "noAnswer", label: "Não atendeu" },
-  { value: "wrongPhone", label: "Tel. errado" },
-  { value: "notAssigned", label: "Não atribuído" },
-  { value: "scheduled", label: "Agendado" },
-  { value: "analysis", label: "Em análise" },
-  { value: "refused", label: "Recusado" },
-  { value: "withdrawn", label: "Retirado" },
+const EDIT_STATUS: { value: "withdrawn" | "refused" | "pending"; label: string; inactive: string; active: string }[] = [
+  { value: "withdrawn", label: "Retirado", inactive: "border border-mint/30 bg-mint/20 text-mint", active: "!bg-mint !text-ink" },
+  { value: "refused", label: "Recusado", inactive: "border border-rose/30 bg-rose/20 text-rose", active: "!bg-rose !text-ink" },
+  { value: "pending", label: "Pendente", inactive: "border border-amber/30 bg-amber/20 text-amber", active: "!bg-amber !text-ink" },
 ];
 
 function ActionBtn({ onClick, className, icon: Icon, label }: { onClick: () => void; className: string; icon: LucideIcon; label: string }) {
